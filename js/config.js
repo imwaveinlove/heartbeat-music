@@ -9,7 +9,8 @@ RG.config = {
   LANES: 4,
   KEYS: ['KeyD', 'KeyF', 'KeyJ', 'KeyK'],
   KEY_LABELS: ['D', 'F', 'J', 'K'],
-  LANE_COLORS: ['#ff4d6d', '#ffb020', '#21e6c1', '#6b8cff'],
+  // pink · lavender · mint · sky — saturated enough to read on the pale field
+  LANE_COLORS: ['#ff2e88', '#b57bee', '#2fc9b8', '#5f9cff'],
 
   // Judgement windows in seconds either side of the note's exact time.
   WINDOWS: { perfect: 0.045, great: 0.090, good: 0.145, miss: 0.190 },

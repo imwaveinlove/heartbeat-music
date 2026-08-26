@@ -57,25 +57,28 @@
 
     // lane backgrounds + tap flash
     for (var i = 0; i < C.LANES; i++) {
-      ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.014)' : 'rgba(255,255,255,0.03)';
+      ctx.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.42)' : 'rgba(255,255,255,0.20)';
       ctx.fillRect(i * lw, 0, lw, H);
       var flash = now - fx.laneFlash[i];
       if (flash < 130) {
-        ctx.globalAlpha = (1 - flash / 130) * 0.18;
+        ctx.globalAlpha = (1 - flash / 130) * 0.26;
         ctx.fillStyle = C.LANE_COLORS[i];
         ctx.fillRect(i * lw, 0, lw, H);
         ctx.globalAlpha = 1;
       }
     }
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    ctx.strokeStyle = 'rgba(255,46,136,0.16)';
     ctx.lineWidth = 1;
     for (var d = 1; d < C.LANES; d++) {
       ctx.beginPath(); ctx.moveTo(d * lw, 0); ctx.lineTo(d * lw, H); ctx.stroke();
     }
 
     // hit line
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(0, hy); ctx.lineTo(W, hy); ctx.stroke();
+    ctx.strokeStyle = '#ff2e88';
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(0, hy); ctx.lineTo(W, hy); ctx.stroke();
 
@@ -91,10 +94,14 @@
       if (y < -nh) continue;
       ctx.fillStyle = C.LANE_COLORS[nt.lane];
       ctx.shadowColor = C.LANE_COLORS[nt.lane];
-      ctx.shadowBlur = 14;
+      ctx.shadowBlur = 12;
       roundRect(nt.lane * lw + lw * 0.12, y - nh / 2, lw * 0.76, nh, 6);
       ctx.fill();
       ctx.shadowBlur = 0;
+      // white rim keeps the candy colours legible against the pale field
+      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
     }
 
     // hit bursts
@@ -115,14 +122,14 @@
     for (var p2 = 0; p2 < C.LANES; p2++) {
       var px = p2 * lw, py = H - padH;
       var held = fx.keyHeld[p2] || (now - fx.laneFlash[p2] < 110);
-      ctx.fillStyle = held ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.05)';
+      ctx.fillStyle = held ? C.LANE_COLORS[p2] : 'rgba(255,255,255,0.78)';
       ctx.fillRect(px + 3, py, lw - 6, padH - 6);
       ctx.strokeStyle = C.LANE_COLORS[p2];
-      ctx.globalAlpha = held ? 1 : 0.45;
-      ctx.lineWidth = 2;
+      ctx.globalAlpha = held ? 1 : 0.55;
+      ctx.lineWidth = 3;
       ctx.strokeRect(px + 3, py, lw - 6, padH - 6);
       ctx.globalAlpha = 1;
-      ctx.fillStyle = held ? '#fff' : 'rgba(255,255,255,0.55)';
+      ctx.fillStyle = held ? '#fff' : C.LANE_COLORS[p2];
       ctx.font = '700 ' + Math.round(17 * us) + 'px -apple-system, Segoe UI, sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(C.KEY_LABELS[p2], px + lw / 2, py + (padH - 6) / 2);
@@ -130,12 +137,15 @@
 
     // combo
     if (game.combo > 1) {
-      ctx.fillStyle = 'rgba(255,210,63,0.92)';
-      ctx.font = '800 ' + Math.round(38 * us) + 'px -apple-system, Segoe UI, sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = '800 ' + Math.round(38 * us) + 'px -apple-system, Segoe UI, sans-serif';
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.strokeText(game.combo, W / 2, H * 0.30);
+      ctx.fillStyle = '#ff2e88';
       ctx.fillText(game.combo, W / 2, H * 0.30);
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
-      ctx.font = '600 ' + Math.round(11 * us) + 'px -apple-system, Segoe UI, sans-serif';
+      ctx.fillStyle = 'rgba(122,46,92,0.5)';
+      ctx.font = '700 ' + Math.round(11 * us) + 'px -apple-system, Segoe UI, sans-serif';
       ctx.fillText('COMBO', W / 2, H * 0.30 + 26 * us);
     }
 
@@ -144,9 +154,12 @@
       var jAge = now - fx.judge.at;
       if (jAge < 420) {
         ctx.globalAlpha = 1 - jAge / 420;
-        ctx.fillStyle = fx.judge.color;
         ctx.font = '800 ' + Math.round(22 * us) + 'px -apple-system, Segoe UI, sans-serif';
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+        ctx.strokeText(fx.judge.label, W / 2, H * 0.44);
+        ctx.fillStyle = fx.judge.color;
         ctx.fillText(fx.judge.label, W / 2, H * 0.44);
         ctx.globalAlpha = 1;
       } else fx.judge = null;
@@ -154,9 +167,12 @@
 
     // lead-in countdown
     if (t < 0) {
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
       ctx.font = '800 ' + Math.round(54 * us) + 'px -apple-system, Segoe UI, sans-serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 7;
+      ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+      ctx.strokeText(String(Math.ceil(-t)), W / 2, H * 0.42);
+      ctx.fillStyle = '#ff2e88';
       ctx.fillText(String(Math.ceil(-t)), W / 2, H * 0.42);
     }
   }

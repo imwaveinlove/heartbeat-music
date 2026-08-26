@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>4KEY 리듬게임</title>
+<title>heartbeat♡</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -23,11 +24,12 @@
 
   <!-- ===== Menu ===== -->
   <div class="overlay" id="menuOverlay">
-    <h1>4KEY RHYTHM</h1>
+    <div id="logo"></div>
+    <h1>heartbeat<span class="heart">♡</span></h1>
     <p class="desc">
-      직접 만든 음원 파일을 불러오면 저음·중저음·중고음·고음 대역을 분석해<br>
-      4개 레인에 자동으로 노트를 배치합니다.<br>
-      <b>D · F · J · K</b> 키 또는 화면 하단 버튼을 터치해 플레이하세요.
+      내 음원을 불러오면 주파수 대역을 분석해<br>
+      4개 레인에 노트를 자동으로 배치합니다.<br>
+      <b>D · F · J · K</b> 키 또는 화면 하단 버튼으로 플레이.
     </p>
 
     <div class="field">
@@ -106,6 +108,7 @@
      tracks from file://, where fetch() is blocked. Absent = 404 here, harmless. -->
 <script src="songs/tracks.js"></script>
 <script src="js/dom.js"></script>
+<script src="js/icon.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/songs.js"></script>
 <script src="js/chart.js"></script>

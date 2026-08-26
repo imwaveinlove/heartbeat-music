@@ -8,6 +8,7 @@
   RG.el = {
     cv: cv,
     ctx: cv.getContext('2d'),
+    logo: $('logo'),
 
     // HUD
     vScore: $('vScore'), vCombo: $('vCombo'), vAcc: $('vAcc'),

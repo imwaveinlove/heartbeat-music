@@ -52,7 +52,7 @@
     if (kind === 'miss') {
       g.counts.miss++;
       g.combo = 0;
-      fx.judge = { label: 'MISS', color: '#ff4d6d', at: performance.now() };
+      fx.judge = { label: 'MISS', color: '#b87fa6', at: performance.now() };
     } else {
       g.counts[kind]++;
       g.combo++;
@@ -60,7 +60,7 @@
       var mult = 1 + Math.min(g.combo, 100) * 0.005;
       g.score += Math.round(C.SCORES[kind] * mult);
       g.weighted += C.SCORES[kind];
-      var col = kind === 'perfect' ? '#ffd23f' : kind === 'great' ? '#21e6c1' : '#6b8cff';
+      var col = kind === 'perfect' ? '#ff2e88' : kind === 'great' ? '#2fc9b8' : '#5f9cff';
       fx.judge = { label: kind.toUpperCase(), color: col, at: performance.now() };
       fx.hits.push({ lane: lane, at: performance.now(), color: col });
     }
@@ -179,8 +179,8 @@
     var grade = acc >= 95 ? 'S' : acc >= 88 ? 'A' : acc >= 78 ? 'B' : acc >= 65 ? 'C' : 'D';
 
     el.grade.textContent = grade;
-    el.grade.style.color = acc >= 95 ? '#ffd23f' : acc >= 88 ? '#21e6c1'
-                         : acc >= 78 ? '#6b8cff' : '#858bab';
+    el.grade.style.color = acc >= 95 ? '#ff2e88' : acc >= 88 ? '#2fc9b8'
+                         : acc >= 78 ? '#5f9cff' : '#b87fa6';
     el.rScore.textContent = current.score;
     el.rAcc.textContent = '정확도 ' + acc.toFixed(2) + '% · 최대 콤보 ' + current.maxCombo;
     el.sP.textContent = c.perfect; el.sG.textContent = c.great;

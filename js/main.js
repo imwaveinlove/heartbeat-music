@@ -2,6 +2,8 @@
 (function () {
   'use strict';
 
+  RG.icon.mount(RG.el.logo);
+
   // The stage can still measure 0 at script time (fonts/layout not settled, or the
   // page laid out in a hidden tab), so re-measure after layout and on full load.
   RG.render.resize();

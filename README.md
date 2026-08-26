@@ -1,6 +1,8 @@
-# 4KEY RHYTHM
+# heartbeat♡
 
 내 음원을 넣으면 자동으로 채보를 만들어 주는 4키 리듬게임. 빌드 도구 없이 `index.html`을 열면 바로 실행됩니다.
+
+솜사탕 드림코어 톤의 분홍 도트 디자인이고, 모바일 가로·세로 모두 대응합니다.
 
 ## 수록곡
 
@@ -68,6 +70,7 @@ index.html            마크업 + 스크립트 태그
 css/style.css         스타일 (가로/세로 반응형)
 js/config.js          상수 · 공유 네임스페이스(RG)
 js/dom.js             DOM 참조
+js/icon.js            마스코트 픽셀 아트 → SVG · 파비콘
 js/audio.js           오디오 컨텍스트 · 데모 비트 합성
 js/songs.js           수록곡 목록 · 로딩(base64 / fetch)
 js/chart.js           주파수 분석 → 자동 채보
