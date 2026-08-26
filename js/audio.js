@@ -41,9 +41,8 @@
     return bus;
   }
 
-  // White noise, generated once and re-triggered per hit. A hit sound has to cut
-  // through the song, and a filtered noise transient does that where a tonal pluck
-  // just blends in — percussion reads as rhythm, a pitched blip reads as melody.
+  // White noise, generated once and re-triggered per hit. Used only for the mallet
+  // strike at the very start of a note — the part that makes a bar sound struck.
   var noiseBuf = null;
   function noise() {
     var c = ctx();
@@ -57,42 +56,51 @@
     return src;
   }
 
-  // Only the click's timbre shifts per lane — enough to tell them apart without
-  // turning the hits into a tune that fights the music.
-  var LANE_CLICK_HZ = [2000, 2500, 3100, 3800];
+  // Major pentatonic, so any combination of lanes hit together still sounds
+  // consonant — there is no interval in this set that can clash.
+  var LANE_HZ = [523.25, 659.25, 783.99, 1046.50];   // C5 E5 G5 C6
+
+  // One resonating bar. Xylophone bars are tuned so the first overtone sits a
+  // twelfth above the fundamental (3f), and it dies away much faster — that ratio
+  // and that decay difference are what make the timbre read as "xylophone" rather
+  // than a plain sine beep.
+  function bar(c, freq, peak, decay, now, out) {
+    var osc = c.createOscillator();
+    var env = c.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, now);
+    env.gain.setValueAtTime(0.0001, now);
+    env.gain.exponentialRampToValueAtTime(peak, now + 0.002);
+    env.gain.exponentialRampToValueAtTime(0.0001, now + decay);
+    osc.connect(env).connect(out);
+    osc.start(now);
+    osc.stop(now + decay + 0.02);
+  }
 
   function tap(kind, lane) {
     var c = ctx();
     if (c.state !== 'running') return;
     var now = c.currentTime, out = hitBus();
-    var level = kind === 'perfect' ? 1 : kind === 'great' ? 0.82 : 0.62;
+    var f = LANE_HZ[lane] || 523.25;
+    var level = kind === 'perfect' ? 1 : kind === 'great' ? 0.8 : 0.6;
 
-    // Crisp transient: a very short band-passed noise burst.
+    // Mallet strike: a couple of milliseconds of bright noise. Without it the note
+    // fades in as a tone instead of being struck.
     var src = noise();
-    var bp = c.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = LANE_CLICK_HZ[lane] || 2500;
-    bp.Q.value = 1.1;
+    var hp = c.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 3500;
     var env = c.createGain();
     env.gain.setValueAtTime(0.0001, now);
-    env.gain.exponentialRampToValueAtTime(0.85 * level, now + 0.001);
-    env.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
-    src.connect(bp).connect(env).connect(out);
+    env.gain.exponentialRampToValueAtTime(0.3 * level, now + 0.001);
+    env.gain.exponentialRampToValueAtTime(0.0001, now + 0.022);
+    src.connect(hp).connect(env).connect(out);
     src.start(now);
-    src.stop(now + 0.06);
+    src.stop(now + 0.03);
 
-    // Body: a fast pitch drop gives the tap weight so it lands like a drum.
-    var body = c.createOscillator();
-    var bodyEnv = c.createGain();
-    body.type = 'sine';
-    body.frequency.setValueAtTime(320, now);
-    body.frequency.exponentialRampToValueAtTime(140, now + 0.055);
-    bodyEnv.gain.setValueAtTime(0.0001, now);
-    bodyEnv.gain.exponentialRampToValueAtTime(0.6 * level, now + 0.003);
-    bodyEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.09);
-    body.connect(bodyEnv).connect(out);
-    body.start(now);
-    body.stop(now + 0.1);
+    bar(c, f,     0.62 * level, 0.40, now, out);   // fundamental, rings on
+    bar(c, f * 3, 0.20 * level, 0.13, now, out);   // tuned overtone, quick
+    bar(c, f * 2, 0.07 * level, 0.18, now, out);   // a little warmth underneath
   }
 
   function tapMiss() {
@@ -113,10 +121,11 @@
   }
 
   // ---------- hold notes ----------
-  // A quiet tone runs for as long as a hold is being kept, so the player can hear
-  // that they are still on it without watching the tail.
+  // A quiet tone runs for as long as a hold is kept, so the player can hear that
+  // they are still on it without watching the tail. It sits an octave below the
+  // struck notes so it never muddies the xylophone hits on top of it.
   var holdVoices = {};
-  var HOLD_HZ = [392.0, 523.25, 659.25, 783.99];   // G4 C5 E5 G5
+  function holdHz(lane) { return (LANE_HZ[lane] || 523.25) / 2; }
 
   function holdStart(lane) {
     var c = ctx();
@@ -125,7 +134,7 @@
     var osc = c.createOscillator();
     var env = c.createGain();
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(HOLD_HZ[lane] || 523.25, now);
+    osc.frequency.setValueAtTime(holdHz(lane), now);
     env.gain.setValueAtTime(0.0001, now);
     env.gain.exponentialRampToValueAtTime(0.16, now + 0.03);
     osc.connect(env).connect(hitBus());
@@ -159,8 +168,8 @@
     var osc = c.createOscillator();
     var env = c.createGain();
     osc.type = 'triangle';
-    osc.frequency.setValueAtTime(HOLD_HZ[lane] || 523.25, now);
-    osc.frequency.exponentialRampToValueAtTime((HOLD_HZ[lane] || 523.25) * 1.5, now + 0.07);
+    osc.frequency.setValueAtTime(holdHz(lane), now);
+    osc.frequency.exponentialRampToValueAtTime(holdHz(lane) * 2, now + 0.07);
     env.gain.setValueAtTime(0.0001, now);
     env.gain.exponentialRampToValueAtTime(0.4, now + 0.004);
     env.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);

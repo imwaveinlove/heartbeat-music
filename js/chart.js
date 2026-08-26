@@ -73,7 +73,7 @@
     if (peakLevel <= 0) return 0;
     var floor = peakLevel * 0.55;
     var i = at + 1;
-    var maxFrames = Math.ceil((C.HOLD.MAX * sampleRate) / HOP);
+    var maxFrames = Math.ceil((C.HOLD.MEASURE_MAX * sampleRate) / HOP);
     var quiet = 0;
     while (i < frames && i - at < maxFrames) {
       if (energy[i] >= floor) {
@@ -161,28 +161,39 @@
       return chosen;
     }
 
-    // Turn the longest-ringing notes into holds. A tail may never run into the next
-    // note in its own lane, so its length is clamped by that gap as well as by the
-    // measured sustain — otherwise the player is asked to hold and tap at once.
+    // Turn the longest-ringing notes into holds, within the difficulty's budget.
+    //
+    // How far a tail may run is the whole difficulty story. On easy/normal it must
+    // clear the next note in ANY lane, so a hold is always played alone; on hard it
+    // only has to clear its own lane, and other lanes keep firing while you hold.
     function assignHolds(notes) {
-      var nextInLane = [null, null, null, null];
-      for (var i = notes.length - 1; i >= 0; i--) {
-        var n = notes[i];
-        n.maxTail = nextInLane[n.lane] === null
-          ? C.HOLD.MAX
-          : Math.max(0, nextInLane[n.lane] - n.time - cfg.laneGap);
-        nextInLane[n.lane] = n.time;
+      var budget = Math.floor(notes.length * (cfg.holdShare || 0));
+      if (budget < 1 || !cfg.holdMax) {
+        notes.forEach(function (n) { delete n.sustain; });
+        return;
       }
 
-      var budget = Math.floor(notes.length * C.HOLD.MAX_SHARE);
-      if (budget < 1) return;
+      var nextInLane = [null, null, null, null];
+      var nextAny = null;
+      for (var i = notes.length - 1; i >= 0; i--) {
+        var n = notes[i];
+        var laneRoom = nextInLane[n.lane] === null
+          ? cfg.holdMax
+          : Math.max(0, nextInLane[n.lane] - n.time - cfg.laneGap);
+        var anyRoom = nextAny === null
+          ? cfg.holdMax
+          : Math.max(0, nextAny - n.time - cfg.globalGap);
+        n.maxTail = cfg.soloHold ? Math.min(laneRoom, anyRoom) : laneRoom;
+        nextInLane[n.lane] = n.time;
+        nextAny = n.time;
+      }
 
       // Longest sustain wins the limited number of hold slots.
       notes.slice()
         .sort(function (a, b) { return b.sustain - a.sustain; })
         .slice(0, budget)
         .forEach(function (n) {
-          var tail = Math.min(n.sustain, n.maxTail, C.HOLD.MAX);
+          var tail = Math.min(n.sustain, n.maxTail, cfg.holdMax);
           if (tail >= C.HOLD.MIN) {
             n.hold = tail;
             n.holdEnd = n.time + tail;

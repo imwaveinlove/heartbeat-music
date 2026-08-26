@@ -16,14 +16,12 @@ RG.config = {
   WINDOWS: { perfect: 0.045, great: 0.090, good: 0.145, miss: 0.190 },
   SCORES:  { perfect: 300, great: 200, good: 100 },
 
+  // Per-difficulty limits live in DIFFS; these apply to every chart.
   HOLD: {
-    MIN: 0.34,          // shorter than this plays as a tap, not a hold
-    MAX: 2.6,           // long tails stop being fun and block the lane
+    MIN: 0.34,           // shorter than this plays as a tap, not a hold
+    MEASURE_MAX: 2.6,    // ceiling on how far sustain is measured
     RELEASE_GRACE: 0.13, // letting go this early still counts as carried
-    BONUS: 220,         // awarded once, on completing the tail
-    // Cap on how many notes may become holds. Sustained energy is common in real
-    // songs, so without a cap most of the chart turns into tails.
-    MAX_SHARE: 0.22
+    BONUS: 220           // awarded once, on completing the tail
   },
 
   ANALYSIS_RATE: 22050,   // offline render rate for onset analysis
@@ -32,10 +30,18 @@ RG.config = {
   BASE_APPROACH: 1.7,     // seconds for a note to travel the lane at 1.0x
 
   // nps = target notes per second; the gaps keep a chart physically playable.
+  //
+  // soloHold is the setting that actually decides how hard a chart feels. With it
+  // on, a tail may not overlap notes in ANY lane, so a hold is always played on its
+  // own. With it off, other lanes keep firing while you hold — that is a real
+  // rhythm-game technique, but it turns a casual chart into a mess.
   DIFFS: {
-    easy:   { nps: 2.4, laneGap: 0.26, globalGap: 0.13 },
-    normal: { nps: 4.0, laneGap: 0.17, globalGap: 0.085 },
-    hard:   { nps: 6.2, laneGap: 0.11, globalGap: 0.055 }
+    easy:   { nps: 1.8, laneGap: 0.34, globalGap: 0.20,
+              holdShare: 0,    holdMax: 0,   soloHold: true },
+    normal: { nps: 3.0, laneGap: 0.22, globalGap: 0.12,
+              holdShare: 0.12, holdMax: 1.6, soloHold: true },
+    hard:   { nps: 5.0, laneGap: 0.13, globalGap: 0.07,
+              holdShare: 0.20, holdMax: 2.6, soloHold: false }
   },
 
   // One filter per lane: kick / low-mid / high-mid / hats+cymbals.
