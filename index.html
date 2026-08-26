@@ -43,8 +43,19 @@ crossorigin="anonymous"></script>
       <button class="btn" id="pickFileBtn">🎵 내 음원 불러오기</button>
       <button class="btn ghost" id="demoBtn">데모 비트</button>
     </div>
+    <div class="row">
+      <button class="btn ghost hidden" id="captureBtn">🎧 유튜브·탭 소리로 만들기</button>
+    </div>
     <input type="file" id="fileInput" accept="audio/*" style="display:none">
     <div id="fileName"></div>
+
+    <!-- shown only while a tab-audio recording is running -->
+    <div id="capturePanel" class="hidden">
+      <div id="captureDot"></div>
+      <div id="captureTime">0:00</div>
+      <button class="btn" id="captureStopBtn">■ 녹음 끝내기</button>
+      <div class="note-small">곡이 끝나면 눌러 주세요. 녹음한 만큼만 채보가 만들어집니다.</div>
+    </div>
 
     <div class="field">
       <div class="field-label">난이도</div>
@@ -112,6 +123,7 @@ crossorigin="anonymous"></script>
 <script src="js/dom.js"></script>
 <script src="js/icon.js"></script>
 <script src="js/audio.js"></script>
+<script src="js/capture.js"></script>
 <script src="js/songs.js"></script>
 <script src="js/chart.js"></script>
 <script src="js/render.js"></script>

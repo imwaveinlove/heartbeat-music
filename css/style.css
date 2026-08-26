@@ -153,6 +153,27 @@ h1 .heart { display: inline-block; animation: beat 1.1s ease-in-out infinite; }
 .btn.ghost:active { box-shadow: 0 1px 0 var(--line), 0 4px 10px rgba(255,46,136,.16); }
 .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
+/* Recording panel, shown only while a tab-audio capture runs. */
+#capturePanel {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 14px 20px; border-radius: 20px;
+  background: rgba(255,255,255,.72); border: 2px solid var(--l0);
+  box-shadow: 0 8px 22px rgba(255,46,136,.18);
+}
+#captureDot {
+  width: 12px; height: 12px; border-radius: 50%; background: var(--l0);
+  animation: recPulse 1.1s ease-in-out infinite;
+}
+@keyframes recPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .35; transform: scale(.8); }
+}
+#captureTime {
+  font-size: 26px; font-weight: 800; color: var(--l0);
+  font-variant-numeric: tabular-nums; letter-spacing: .02em;
+}
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
 /* Built-in track buttons: title over a small duration line. */
 .song-btn {
   display: flex; flex-direction: column; align-items: center; gap: 1px;

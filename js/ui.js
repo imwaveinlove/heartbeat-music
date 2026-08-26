@@ -91,6 +91,45 @@
       });
   });
 
+  // ---------- tab audio capture ----------
+  // Only offered where the browser can actually do it; Safari cannot capture
+  // tab audio at all, so the button stays hidden there rather than failing later.
+  if (RG.capture.supported()) el.captureBtn.classList.remove('hidden');
+
+  function showCapturePanel(on) {
+    el.capturePanel.classList.toggle('hidden', !on);
+    el.captureBtn.classList.toggle('hidden', on || !RG.capture.supported());
+    el.pickFileBtn.disabled = on;
+    el.demoBtn.disabled = on;
+  }
+
+  el.captureBtn.addEventListener('click', function () {
+    RG.audio.ctx();
+    el.playBtn.classList.add('hidden');
+    setStatus('공유 창에서 곡이 재생 중인 탭을 고르고 "탭 오디오도 공유" 를 체크해 주세요.');
+    RG.capture.start({
+      onStart: function () {
+        showCapturePanel(true);
+        el.captureTime.textContent = '0:00';
+        setStatus('녹음 중... 곡을 처음부터 재생해 주세요.');
+      },
+      onTick: function (sec) { el.captureTime.textContent = fmtTime(sec); },
+      onDone: function (buffer) {
+        showCapturePanel(false);
+        prepare(buffer, '탭 녹음 ' + fmtTime(buffer.duration));
+      },
+      onError: function (msg) {
+        showCapturePanel(false);
+        setStatus(msg);
+      }
+    });
+  });
+
+  el.captureStopBtn.addEventListener('click', function () {
+    setStatus('녹음을 마무리하는 중...');
+    RG.capture.stop();
+  });
+
   el.demoBtn.addEventListener('click', function () {
     RG.audio.ctx();
     setStatus('데모 비트 생성 중...');
