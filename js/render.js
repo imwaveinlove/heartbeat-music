@@ -43,6 +43,28 @@
     ctx.closePath();
   }
 
+  // A hold's tail: a rounded bar running from the note head up to its release
+  // point. While the note is actually being held the bar is anchored at the hit
+  // line instead, so it visibly drains away as the tail is carried.
+  function drawTail(lane, yTop, yBottom, active) {
+    if (yBottom < 0 || yTop > H) return;
+    yTop = Math.max(yTop, -24);
+    yBottom = Math.min(yBottom, H);
+    var lw = laneW();
+    var w = lw * 0.44;
+    var x = lane * lw + (lw - w) / 2;
+    var h = Math.max(4, yBottom - yTop);
+
+    ctx.globalAlpha = active ? 0.95 : 0.55;
+    ctx.fillStyle = C.LANE_COLORS[lane];
+    roundRect(x, yTop, w, h, w / 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = active ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
   function draw(t) {
     var game = RG.game.current;
     if (!game) return;
@@ -82,9 +104,23 @@
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.moveTo(0, hy); ctx.lineTo(W, hy); ctx.stroke();
 
+    // hold tails first, so the note heads sit on top of them
+    var notes = game.notes;
+    for (var q = game.missPointer; q < notes.length; q++) {
+      var ht = notes[q];
+      if (ht.time - t > app + 0.2) break;
+      if (!ht.hold || ht.judged) continue;
+      drawTail(ht.lane, hy - (ht.holdEnd - t) * pps, hy - (ht.time - t) * pps, false);
+    }
+    // Tails being held are drawn from game.activeHolds, not the note list: the miss
+    // sweep has already advanced missPointer past their heads by this point.
+    for (var a = 0; a < C.LANES; a++) {
+      var ah = game.activeHolds && game.activeHolds[a];
+      if (ah) drawTail(a, hy - (ah.holdEnd - t) * pps, hy, true);
+    }
+
     // notes
     var nh = Math.max(11, Math.min(lw * 0.22, 26) * us);
-    var notes = game.notes;
     for (var k = game.missPointer; k < notes.length; k++) {
       var nt = notes[k];
       var dt = nt.time - t;

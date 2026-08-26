@@ -16,6 +16,16 @@ RG.config = {
   WINDOWS: { perfect: 0.045, great: 0.090, good: 0.145, miss: 0.190 },
   SCORES:  { perfect: 300, great: 200, good: 100 },
 
+  HOLD: {
+    MIN: 0.34,          // shorter than this plays as a tap, not a hold
+    MAX: 2.6,           // long tails stop being fun and block the lane
+    RELEASE_GRACE: 0.13, // letting go this early still counts as carried
+    BONUS: 220,         // awarded once, on completing the tail
+    // Cap on how many notes may become holds. Sustained energy is common in real
+    // songs, so without a cap most of the chart turns into tails.
+    MAX_SHARE: 0.22
+  },
+
   ANALYSIS_RATE: 22050,   // offline render rate for onset analysis
   HOP: 256,               // samples per analysis frame (~11.6ms at 22050)
   LEAD_IN: 2.2,           // seconds of empty runway before audio starts

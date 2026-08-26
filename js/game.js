@@ -89,6 +89,40 @@
     best.judged = true; best.hit = true;
     registerHit(bestDiff <= C.WINDOWS.perfect ? 'perfect'
               : bestDiff <= C.WINDOWS.great   ? 'great' : 'good', lane);
+
+    // The head is judged like any tap; the tail is a separate promise to keep.
+    if (best.hold) {
+      current.activeHolds[lane] = best;
+      RG.audio.holdStart(lane);
+    }
+  }
+
+  // Called on key-up / finger-up. Letting go inside the grace window still counts.
+  function releaseLane(lane) {
+    if (!current || current.ended) return;
+    var note = current.activeHolds[lane];
+    if (!note) return;
+    current.activeHolds[lane] = null;
+    RG.audio.holdStop(lane);
+
+    if (songTime() >= note.holdEnd - C.HOLD.RELEASE_GRACE) {
+      completeHold(note, lane);
+    } else {
+      note.holdBroken = true;
+      current.counts.miss++;
+      current.combo = 0;
+      fx.judge = { label: 'BROKEN', color: '#b87fa6', at: performance.now() };
+      RG.audio.tapMiss();
+      updateHud();
+    }
+  }
+
+  function completeHold(note, lane) {
+    note.holdDone = true;
+    current.score += C.HOLD.BONUS;
+    fx.hits.push({ lane: lane, at: performance.now(), color: C.LANE_COLORS[lane] });
+    RG.audio.holdComplete(lane);
+    updateHud();
   }
 
   function loop() {
@@ -105,6 +139,16 @@
       current.missPointer++;
     }
 
+    // a tail carried to its end completes on its own — the player can let go now
+    for (var h = 0; h < C.LANES; h++) {
+      var held = current.activeHolds[h];
+      if (held && t >= held.holdEnd) {
+        current.activeHolds[h] = null;
+        RG.audio.holdStop(h);
+        completeHold(held, h);
+      }
+    }
+
     RG.render.draw(t);
     el.progressFill.style.width = Math.max(0, Math.min(t / RG.song.buffer.duration, 1)) * 100 + '%';
 
@@ -117,13 +161,20 @@
     if (!RG.song.chart || !RG.song.chart.length) return;
 
     current = {
+      // A fresh copy per run, so replaying never inherits the last run's judgements.
+      // hold/holdEnd must come along or every tail silently becomes a plain tap.
       notes: RG.song.chart.map(function (n) {
-        return { time: n.time, lane: n.lane, hit: false, judged: false };
+        return {
+          time: n.time, lane: n.lane, hit: false, judged: false,
+          hold: n.hold || 0, holdEnd: n.holdEnd || 0,
+          holdDone: false, holdBroken: false
+        };
       }),
       total: RG.song.chart.length,
       score: 0, combo: 0, maxCombo: 0,
       counts: { perfect: 0, great: 0, good: 0, miss: 0 },
       weighted: 0, missPointer: 0,
+      activeHolds: [null, null, null, null],
       paused: false, ended: false,
       startAt: 0, pausedAt: 0
     };
@@ -144,11 +195,20 @@
     rafId = requestAnimationFrame(loop);
   }
 
+  // Drop any tails in progress without penalty — a pause or a quit is not a miss,
+  // and a hold tone left running would drone on over the menu.
+  function clearHolds() {
+    RG.audio.holdStopAll();
+    if (current) current.activeHolds = [null, null, null, null];
+    fx.keyHeld = [false, false, false, false];
+  }
+
   function pause() {
     if (!current || current.paused || current.ended) return;
     current.paused = true;
     current.pausedAt = songTime();
     stopSource();
+    clearHolds();
     el.pauseOverlay.classList.remove('hidden');
   }
 
@@ -172,6 +232,7 @@
   function end() {
     current.ended = true;
     stopSource();
+    clearHolds();
     if (rafId) cancelAnimationFrame(rafId);
     el.pauseBtn.classList.add('hidden');
 
@@ -205,6 +266,7 @@
   function toMenu() {
     if (current) current.ended = true;
     stopSource();
+    clearHolds();
     if (rafId) cancelAnimationFrame(rafId);
     current = null;
     RG.game.current = null;
@@ -231,7 +293,7 @@
   });
   window.addEventListener('keyup', function (e) {
     var idx = C.KEYS.indexOf(e.code);
-    if (idx >= 0) fx.keyHeld[idx] = false;
+    if (idx >= 0) { fx.keyHeld[idx] = false; releaseLane(idx); }
   });
 
   // Touch: each finger is tracked separately so chords on multiple lanes work.
@@ -248,7 +310,11 @@
   });
   function releasePointer(e) {
     var lane = activePointers[e.pointerId];
-    if (lane != null) { fx.keyHeld[lane] = false; delete activePointers[e.pointerId]; }
+    if (lane != null) {
+      fx.keyHeld[lane] = false;
+      delete activePointers[e.pointerId];
+      releaseLane(lane);
+    }
   }
   // released on window: a finger that slides off the canvas must not stick the pad down
   window.addEventListener('pointerup', releasePointer);
@@ -257,7 +323,7 @@
   RG.game = {
     current: null,
     start: start, pause: pause, resume: resume, togglePause: togglePause,
-    toMenu: toMenu, pressLane: pressLane,
+    toMenu: toMenu, pressLane: pressLane, releaseLane: releaseLane,
     songTime: songTime, approachTime: approachTime
   };
 })();

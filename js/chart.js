@@ -54,10 +54,36 @@
       if (flux[m] > thresh &&
           flux[m] >= flux[m - 1] && flux[m] >= flux[m + 1] &&
           flux[m] >= flux[m - 2] && flux[m] >= flux[m + 2]) {
-        peaks.push({ time: (m * HOP) / sampleRate, strength: flux[m] });
+        peaks.push({
+          time: (m * HOP) / sampleRate,
+          strength: flux[m],
+          sustain: sustainAfter(energy, m, HOP, sampleRate)
+        });
       }
     }
     return peaks;
+  }
+
+  // How long the band keeps ringing after an onset. Measured against the onset's
+  // own level rather than a fixed floor, so a quiet sustained pad counts just as
+  // much as a loud one. This is what decides which notes become holds.
+  function sustainAfter(energy, at, HOP, sampleRate) {
+    var frames = energy.length;
+    var peakLevel = energy[at];
+    if (peakLevel <= 0) return 0;
+    var floor = peakLevel * 0.55;
+    var i = at + 1;
+    var maxFrames = Math.ceil((C.HOLD.MAX * sampleRate) / HOP);
+    var quiet = 0;
+    while (i < frames && i - at < maxFrames) {
+      if (energy[i] >= floor) {
+        quiet = 0;
+      } else if (++quiet > 3) {      // tolerate brief dips inside a sustained note
+        break;
+      }
+      i++;
+    }
+    return ((i - quiet - at) * HOP) / sampleRate;
   }
 
   function thinByGap(list, gap) {
@@ -98,7 +124,10 @@
         var peaks = detectOnsets(rendered.getChannelData(0), rendered.sampleRate);
         peaks = thinByGap(peaks, 0.05);   // dedupe only; spacing is enforced in finalize()
         for (var i = 0; i < peaks.length; i++) {
-          all.push({ time: peaks[i].time, lane: thisLane, strength: peaks[i].strength });
+          all.push({
+            time: peaks[i].time, lane: thisLane,
+            strength: peaks[i].strength, sustain: peaks[i].sustain
+          });
         }
         laneIndex++;
         if (onProgress) onProgress(laneIndex / C.LANES);
@@ -122,10 +151,45 @@
         if (nearestGap(globalTimes, nt.time) < cfg.globalGap) continue;
         insertSorted(laneTimes[nt.lane], nt.time);
         insertSorted(globalTimes, nt.time);
-        chosen.push({ time: nt.time, lane: nt.lane, hit: false, judged: false });
+        chosen.push({
+          time: nt.time, lane: nt.lane, hit: false, judged: false,
+          sustain: nt.sustain || 0
+        });
       }
       chosen.sort(function (a, b) { return a.time - b.time; });
+      assignHolds(chosen);
       return chosen;
+    }
+
+    // Turn the longest-ringing notes into holds. A tail may never run into the next
+    // note in its own lane, so its length is clamped by that gap as well as by the
+    // measured sustain — otherwise the player is asked to hold and tap at once.
+    function assignHolds(notes) {
+      var nextInLane = [null, null, null, null];
+      for (var i = notes.length - 1; i >= 0; i--) {
+        var n = notes[i];
+        n.maxTail = nextInLane[n.lane] === null
+          ? C.HOLD.MAX
+          : Math.max(0, nextInLane[n.lane] - n.time - cfg.laneGap);
+        nextInLane[n.lane] = n.time;
+      }
+
+      var budget = Math.floor(notes.length * C.HOLD.MAX_SHARE);
+      if (budget < 1) return;
+
+      // Longest sustain wins the limited number of hold slots.
+      notes.slice()
+        .sort(function (a, b) { return b.sustain - a.sustain; })
+        .slice(0, budget)
+        .forEach(function (n) {
+          var tail = Math.min(n.sustain, n.maxTail, C.HOLD.MAX);
+          if (tail >= C.HOLD.MIN) {
+            n.hold = tail;
+            n.holdEnd = n.time + tail;
+          }
+        });
+
+      notes.forEach(function (n) { delete n.maxTail; delete n.sustain; });
     }
 
     return step();
