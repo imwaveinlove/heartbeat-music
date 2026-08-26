@@ -2,9 +2,28 @@
 
 내 음원을 넣으면 자동으로 채보를 만들어 주는 4키 리듬게임. 빌드 도구 없이 `index.html`을 열면 바로 실행됩니다.
 
+## 수록곡
+
+| 곡 | 길이 |
+|----|------|
+| 虹を越えて ver.1 | 1:13 |
+| 虹を越えて ver.2 | 1:21 |
+
+내 음원 파일을 직접 불러오거나, 합성된 데모 비트로 플레이할 수도 있습니다.
+
+### 수록곡을 추가하려면
+
+1. `songs/` 에 mp3를 넣습니다.
+2. `js/songs.js` 의 `builtin` 배열에 항목을 추가합니다.
+3. `python tools/embed-songs.py` 를 실행합니다.
+
+3번이 필요한 이유: 브라우저는 `file://` 에서 `fetch()` 를 차단하므로, `index.html` 을 더블클릭해서 연 페이지는 `songs/*.mp3` 를 읽을 수 없습니다. 이 스크립트가 mp3를 base64로 `songs/tracks.js` 에 구워 넣어 그 제약을 우회합니다. 로컬 서버나 GitHub Pages처럼 http로 열면 mp3를 직접 fetch하므로 이 파일은 필요 없고, 그래서 git에는 포함하지 않습니다(약 5MB).
+
+`js/songs.js` 의 길이 표기는 **디코딩된 실제 길이**입니다. mp3 헤더의 비트레이트로 계산하면 VBR 파일에서 실제보다 몇 배 길게 나옵니다.
+
 ## 플레이
 
-`index.html`을 브라우저로 열고 — 음원을 불러오거나 데모 비트로 바로 시작하세요.
+`index.html`을 브라우저로 열고 — 수록곡을 고르거나, 내 음원을 불러오거나, 데모 비트로 바로 시작하세요.
 
 - **키보드**: `D` `F` `J` `K`
 - **모바일**: 화면 하단 4개 패드 터치
@@ -45,16 +64,19 @@
 ## 구조
 
 ```
-index.html      마크업 + 스크립트 태그
-css/style.css   스타일 (가로/세로 반응형)
-js/config.js    상수 · 공유 네임스페이스(RG)
-js/dom.js       DOM 참조
-js/audio.js     오디오 컨텍스트 · 데모 비트 합성
-js/chart.js     주파수 분석 → 자동 채보
-js/render.js    캔버스 크기 계산 · 그리기
-js/game.js      판정 · 점수 · 프레임 루프 · 입력
-js/ui.js        메뉴 · 설정 · 전체화면
-js/main.js      부트스트랩
+index.html            마크업 + 스크립트 태그
+css/style.css         스타일 (가로/세로 반응형)
+js/config.js          상수 · 공유 네임스페이스(RG)
+js/dom.js             DOM 참조
+js/audio.js           오디오 컨텍스트 · 데모 비트 합성
+js/songs.js           수록곡 목록 · 로딩(base64 / fetch)
+js/chart.js           주파수 분석 → 자동 채보
+js/render.js          캔버스 크기 계산 · 그리기
+js/game.js            판정 · 점수 · 프레임 루프 · 입력
+js/ui.js              메뉴 · 설정 · 전체화면
+js/main.js            부트스트랩
+songs/                mp3 원본
+tools/embed-songs.py  mp3 → base64 (file:// 대응)
 ```
 
 `import`/`export` 대신 일반 `<script>`와 전역 네임스페이스 `RG`를 씁니다. ES 모듈은 브라우저가 `file://`에서 로딩을 차단해서, 파일을 더블클릭해 여는 방식이 동작하지 않기 때문입니다. 스크립트 로드 순서는 의존성 순서이므로 `index.html`에서 순서를 바꾸면 안 됩니다.

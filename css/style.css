@@ -74,6 +74,14 @@
   }
   .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 
+  /* Built-in track buttons: title over a small duration line. */
+  .song-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    padding: 9px 20px; line-height: 1.25;
+  }
+  .song-btn span { font-size: 14px; }
+  .song-btn small { font-size: 10px; color: var(--dim); font-weight: 600; letter-spacing: .04em; }
+
   .field { display: flex; flex-direction: column; gap: 6px; align-items: center; }
   .field-label { font-size: 11px; color: var(--dim); letter-spacing: .08em; }
   .seg { display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }

@@ -17,6 +17,7 @@
     menuOverlay: $('menuOverlay'), pauseOverlay: $('pauseOverlay'), resultOverlay: $('resultOverlay'),
 
     // Song loading
+    songRow: $('songRow'),
     pickFileBtn: $('pickFileBtn'), demoBtn: $('demoBtn'), fileInput: $('fileInput'),
     fileName: $('fileName'), loadStatus: $('loadStatus'), bar: $('bar'), barFill: $('barFill'),
 

@@ -50,6 +50,27 @@
       });
   }
 
+  // ---------- built-in tracks ----------
+  RG.songs.builtin.forEach(function (track) {
+    var b = document.createElement('button');
+    b.className = 'btn ghost song-btn';
+    b.innerHTML = '<span>' + track.title + '</span><small>' + track.note + '</small>';
+    b.addEventListener('click', function () {
+      RG.audio.ctx();                        // unlock audio inside the tap
+      setStatus('수록곡 불러오는 중...');
+      setBar(null);
+      el.playBtn.classList.add('hidden');
+      // Yield to the event loop so the status paints before base64 decoding blocks
+      // the thread. setTimeout, not rAF: rAF never fires while the tab is hidden.
+      setTimeout(function () {
+        RG.songs.load(track)
+          .then(function (buf) { return prepare(buf, track.title + ' ' + track.note); })
+          .catch(function (err) { setStatus(err.message); });
+      }, 0);
+    });
+    el.songRow.appendChild(b);
+  });
+
   // ---------- song sources ----------
   el.pickFileBtn.addEventListener('click', function () {
     RG.audio.ctx();          // unlock audio inside the tap
