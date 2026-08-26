@@ -1,7 +1,8 @@
-/* audio.js — the shared AudioContext and the built-in demo beat.
+/* audio.js — the shared AudioContext and the note hit sounds.
  *
- * The demo exists so the game is playable before the user picks a file, and it
- * runs through the exact same analysis path as a real song.
+ * Hit sounds are synthesised rather than loaded from files: they must fire the
+ * instant a key is judged, and a sample fetched over the network (or decoded on
+ * demand) would add latency exactly where it is most audible.
  */
 (function () {
   'use strict';
@@ -19,64 +20,72 @@
     return audioCtx;
   }
 
-  function makeDemoSong() {
-    var sr = 44100, dur = 32, bpm = 124, beat = 60 / bpm;
-    var OC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-    var off = new OC(1, Math.ceil(sr * dur), sr);
-
-    var noiseBuf = off.createBuffer(1, sr, sr);
-    var nd = noiseBuf.getChannelData(0);
-    for (var i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-
-    function env(node, t, peak, decay) {
-      var g = off.createGain();
-      g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(peak, t + 0.004);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
-      node.connect(g);
-      return g;
+  // One shared bus for every hit sound. Without it, a dense stream of notes stacks
+  // gain and clips against the song; the compressor keeps the mix from spiking.
+  var bus = null;
+  function hitBus() {
+    var c = ctx();
+    if (!bus) {
+      var comp = c.createDynamicsCompressor();
+      var g = c.createGain();
+      g.gain.value = 0.55;
+      g.connect(comp).connect(c.destination);
+      bus = g;
     }
-    function kick(t) {
-      var o = off.createOscillator();
-      o.type = 'sine';
-      o.frequency.setValueAtTime(150, t);
-      o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
-      env(o, t, 0.9, 0.28).connect(off.destination);
-      o.start(t); o.stop(t + 0.3);
-    }
-    function snare(t) {
-      var s = off.createBufferSource(); s.buffer = noiseBuf;
-      var bp = off.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 0.8;
-      s.connect(bp);
-      env(bp, t, 0.5, 0.18).connect(off.destination);
-      s.start(t); s.stop(t + 0.2);
-    }
-    function hat(t) {
-      var s = off.createBufferSource(); s.buffer = noiseBuf;
-      var hp = off.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7000;
-      s.connect(hp);
-      env(hp, t, 0.22, 0.05).connect(off.destination);
-      s.start(t); s.stop(t + 0.07);
-    }
-    function blip(t, f) {
-      var o = off.createOscillator(); o.type = 'triangle'; o.frequency.value = f;
-      env(o, t, 0.3, 0.22).connect(off.destination);
-      o.start(t); o.stop(t + 0.25);
-    }
-
-    var scale = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
-    var totalBeats = Math.floor(dur / beat);
-    for (var b = 0; b < totalBeats; b++) {
-      var t = 1.0 + b * beat;
-      var inBar = b % 4;
-      if (inBar === 0 || inBar === 2) kick(t);
-      if (inBar === 1 || inBar === 3) snare(t);
-      hat(t); hat(t + beat / 2);
-      if (b > 7 && b % 2 === 0) blip(t, scale[(b * 3) % scale.length]);
-      if (b > 15 && inBar === 3) blip(t + beat / 2, scale[(b * 5) % scale.length]);
-    }
-    return off.startRendering();
+    return bus;
   }
 
-  RG.audio = { ctx: ctx, makeDemoSong: makeDemoSong };
+  // A pentatonic set, so notes landing together never sound dissonant.
+  var LANE_HZ = [523.25, 659.25, 783.99, 987.77];   // C5 E5 G5 B5
+
+  function tap(kind, lane) {
+    var c = ctx();
+    if (c.state !== 'running') return;
+    var now = c.currentTime;
+    var out = hitBus();
+
+    // Soft pluck: triangle body, quick exponential decay.
+    var osc = c.createOscillator();
+    var env = c.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(LANE_HZ[lane] || 523.25, now);
+    var peak = kind === 'perfect' ? 0.32 : kind === 'great' ? 0.26 : 0.2;
+    env.gain.setValueAtTime(0.0001, now);
+    env.gain.exponentialRampToValueAtTime(peak, now + 0.004);
+    env.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
+    osc.connect(env).connect(out);
+    osc.start(now);
+    osc.stop(now + 0.15);
+
+    // A short high blip on top gives the press its "click" transient.
+    var tick = c.createOscillator();
+    var tickEnv = c.createGain();
+    tick.type = 'square';
+    tick.frequency.setValueAtTime((LANE_HZ[lane] || 523.25) * 3, now);
+    tickEnv.gain.setValueAtTime(0.0001, now);
+    tickEnv.gain.exponentialRampToValueAtTime(0.05, now + 0.002);
+    tickEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.035);
+    tick.connect(tickEnv).connect(out);
+    tick.start(now);
+    tick.stop(now + 0.05);
+  }
+
+  function tapMiss() {
+    var c = ctx();
+    if (c.state !== 'running') return;
+    var now = c.currentTime;
+    var osc = c.createOscillator();
+    var env = c.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.12);
+    env.gain.setValueAtTime(0.0001, now);
+    env.gain.exponentialRampToValueAtTime(0.12, now + 0.005);
+    env.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+    osc.connect(env).connect(hitBus());
+    osc.start(now);
+    osc.stop(now + 0.18);
+  }
+
+  RG.audio = { ctx: ctx, tap: tap, tapMiss: tapMiss };
 })();

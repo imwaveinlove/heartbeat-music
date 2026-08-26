@@ -53,6 +53,7 @@
       g.counts.miss++;
       g.combo = 0;
       fx.judge = { label: 'MISS', color: '#b87fa6', at: performance.now() };
+      RG.audio.tapMiss();
     } else {
       g.counts[kind]++;
       g.combo++;
@@ -63,6 +64,7 @@
       var col = kind === 'perfect' ? '#ff2e88' : kind === 'great' ? '#2fc9b8' : '#5f9cff';
       fx.judge = { label: kind.toUpperCase(), color: col, at: performance.now() };
       fx.hits.push({ lane: lane, at: performance.now(), color: col });
+      RG.audio.tap(kind, lane);
     }
     updateHud();
   }

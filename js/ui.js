@@ -100,7 +100,6 @@
     el.capturePanel.classList.toggle('hidden', !on);
     el.captureBtn.classList.toggle('hidden', on || !RG.capture.supported());
     el.pickFileBtn.disabled = on;
-    el.demoBtn.disabled = on;
   }
 
   el.captureBtn.addEventListener('click', function () {
@@ -128,15 +127,6 @@
   el.captureStopBtn.addEventListener('click', function () {
     setStatus('녹음을 마무리하는 중...');
     RG.capture.stop();
-  });
-
-  el.demoBtn.addEventListener('click', function () {
-    RG.audio.ctx();
-    setStatus('데모 비트 생성 중...');
-    el.playBtn.classList.add('hidden');
-    RG.audio.makeDemoSong()
-      .then(function (buf) { return prepare(buf, '데모 비트 (124 BPM)'); })
-      .catch(function (err) { setStatus('데모 생성 실패: ' + err.message); });
   });
 
   // ---------- settings ----------
