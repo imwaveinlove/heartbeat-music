@@ -57,14 +57,13 @@
   }
 
   // Major pentatonic, so any combination of lanes hit together still sounds
-  // consonant — there is no interval in this set that can clash.
-  var LANE_HZ = [523.25, 659.25, 783.99, 1046.50];   // C5 E5 G5 C6
+  // consonant. Sitting an octave up from a xylophone's range is what makes it read
+  // as glass rather than wood — it only works because the decay is this short.
+  var LANE_HZ = [783.99, 1046.50, 1318.51, 1567.98];   // G5 C6 E6 G6
 
-  // One resonating bar. Xylophone bars are tuned so the first overtone sits a
-  // twelfth above the fundamental (3f), and it dies away much faster — that ratio
-  // and that decay difference are what make the timbre read as "xylophone" rather
-  // than a plain sine beep.
-  function bar(c, freq, peak, decay, now, out) {
+  // One partial of the chime. Octave-related partials (2f, 3f) stay glassy; the
+  // twelfth-heavy ratio a xylophone uses is what made the old sound woody.
+  function partial(c, freq, peak, decay, now, out) {
     var osc = c.createOscillator();
     var env = c.createGain();
     osc.type = 'sine';
@@ -77,30 +76,48 @@
     osc.stop(now + decay + 0.02);
   }
 
+  // Three layers, all done inside ~0.2s: a soft click for contact, a bubbly upward
+  // blip for bounce, and a short sweet chime on top. Kept brief on purpose — this
+  // fires hundreds of times per song and anything longer turns into mush.
   function tap(kind, lane) {
     var c = ctx();
     if (c.state !== 'running') return;
     var now = c.currentTime, out = hitBus();
-    var f = LANE_HZ[lane] || 523.25;
-    var level = kind === 'perfect' ? 1 : kind === 'great' ? 0.8 : 0.6;
+    var f = LANE_HZ[lane] || 1046.50;
+    var level = kind === 'perfect' ? 1 : kind === 'great' ? 0.82 : 0.64;
 
-    // Mallet strike: a couple of milliseconds of bright noise. Without it the note
-    // fades in as a tone instead of being struck.
+    // Soft click. Band-passed rather than high-passed so it lands as a tick
+    // instead of a hiss.
     var src = noise();
-    var hp = c.createBiquadFilter();
-    hp.type = 'highpass';
-    hp.frequency.value = 3500;
-    var env = c.createGain();
-    env.gain.setValueAtTime(0.0001, now);
-    env.gain.exponentialRampToValueAtTime(0.3 * level, now + 0.001);
-    env.gain.exponentialRampToValueAtTime(0.0001, now + 0.022);
-    src.connect(hp).connect(env).connect(out);
+    var bp = c.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 3600;
+    bp.Q.value = 0.9;
+    var clickEnv = c.createGain();
+    clickEnv.gain.setValueAtTime(0.0001, now);
+    clickEnv.gain.exponentialRampToValueAtTime(0.22 * level, now + 0.001);
+    clickEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.013);
+    src.connect(bp).connect(clickEnv).connect(out);
     src.start(now);
-    src.stop(now + 0.03);
+    src.stop(now + 0.02);
 
-    bar(c, f,     0.62 * level, 0.40, now, out);   // fundamental, rings on
-    bar(c, f * 3, 0.20 * level, 0.13, now, out);   // tuned overtone, quick
-    bar(c, f * 2, 0.07 * level, 0.18, now, out);   // a little warmth underneath
+    // Bubbly sparkle: a fast upward sweep. This is the part that makes the hit feel
+    // bouncy and playful rather than just bright.
+    var pop = c.createOscillator();
+    var popEnv = c.createGain();
+    pop.type = 'sine';
+    pop.frequency.setValueAtTime(f * 0.55, now);
+    pop.frequency.exponentialRampToValueAtTime(f * 1.02, now + 0.045);
+    popEnv.gain.setValueAtTime(0.0001, now);
+    popEnv.gain.exponentialRampToValueAtTime(0.34 * level, now + 0.004);
+    popEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
+    pop.connect(popEnv).connect(out);
+    pop.start(now);
+    pop.stop(now + 0.12);
+
+    partial(c, f,     0.30 * level, 0.20, now, out);   // chime body
+    partial(c, f * 2, 0.14 * level, 0.14, now, out);   // shine
+    partial(c, f * 3, 0.05 * level, 0.09, now, out);   // a touch of air
   }
 
   function tapMiss() {
