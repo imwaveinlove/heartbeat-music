@@ -3,14 +3,9 @@
  * Kept as a grid rather than a binary image so it scales to any size, stays
  * editable, and needs no file alongside index.html. Rendered to an SVG data URI
  * for the favicon and injected inline as the menu logo.
- *
- * icon.png (the real mascot) is preferred when present; the pixel art is the
- * fallback so the page still has a logo and favicon if that file goes missing.
  */
 (function () {
   'use strict';
-
-  var IMAGE_PATH = 'icon.png';   // the real mascot; pixel art below is the fallback
 
   var COLORS = {
     P: '#ff2e88',   // hot pink outline
@@ -20,30 +15,32 @@
     D: '#9aa0b4'    // headphone shade
   };
 
-  // 24 x 22. '.' is transparent.
+  // 30 x 22. '.' is transparent.
+  // Columns 0-2 and 27-29 hold the little white wings that sit on the headphones;
+  // the cat head and heart face occupy the 24 columns between them.
   var GRID = [
-    '.....PP..........PP.....',
-    '....PWWP........PWWP....',
-    '...PWWWWP......PWWWWP...',
-    '..PWWWWWWWP..PWWWWWWWP..',
-    '..PWWWWWWWWWWWWWWWWWWP..',
-    '.PWWWWWWWWWWWWWWWWWWWWP.',
-    '.PWWWWWWWWWWWWWWWWWWWWP.',
-    '.PWWPPPPPPPPPPPPPPPPWWP.',
-    'GPWPHHHHHHHHHHHHHHHHPWPG',
-    'GGPHHHHHHHHHHHHHHHHHHPGG',
-    'GDPHHHHHHHHHHHHHHHHHHPDG',
-    'GDPHHHPHHPHHHHPHHPHHHPDG',
-    'GDPHHHHPPHHHHHHPPHHHHPDG',
-    'GDPHHHHHHHHHHHHHHHHHHPDG',
-    'GGPHHHHHHPHPPHPHHHHHHPGG',
-    'GPPHHHHHHHPHHPHHHHHHHPPG',
-    '..PHHHHHHHHHHHHHHHHHHP..',
-    '...PHHHHHHHHHHHHHHHHP...',
-    '.....PHHHHHHHHHHHHP.....',
-    '.......PHHHHHHHHP.......',
-    '.........PHHHHP.........',
-    '...........PP...........'
+    '...' + '.....PP..........PP.....' + '...',
+    '...' + '....PWWP........PWWP....' + '...',
+    '...' + '...PWWWWP......PWWWWP...' + '...',
+    '...' + '..PWWWWWWWP..PWWWWWWWP..' + '...',
+    '...' + '..PWWWWWWWWWWWWWWWWWWP..' + '...',
+    '..P' + '.PWWWWWWWWWWWWWWWWWWWWP.' + 'P..',
+    '.PW' + '.PWWWWWWWWWWWWWWWWWWWWP.' + 'WP.',
+    'PWW' + '.PWWPPPPPPPPPPPPPPPPWWP.' + 'WWP',
+    'PWW' + 'GPWPHHHHHHHHHHHHHHHHPWPG' + 'WWP',
+    '.PP' + 'GGPHHHHHHHHHHHHHHHHHHPGG' + 'PP.',
+    '...' + 'GDPHHHHHHHHHHHHHHHHHHPDG' + '...',
+    '...' + 'GDPHHHPHHPHHHHPHHPHHHPDG' + '...',
+    '...' + 'GDPHHHHPPHHHHHHPPHHHHPDG' + '...',
+    '...' + 'GDPHHHHHHHHHHHHHHHHHHPDG' + '...',
+    '...' + 'GGPHHHHHHPHPPHPHHHHHHPGG' + '...',
+    '...' + 'GPPHHHHHHHPHHPHHHHHHHPPG' + '...',
+    '...' + '..PHHHHHHHHHHHHHHHHHHP..' + '...',
+    '...' + '...PHHHHHHHHHHHHHHHHP...' + '...',
+    '...' + '.....PHHHHHHHHHHHHP.....' + '...',
+    '...' + '.......PHHHHHHHHP.......' + '...',
+    '...' + '.........PHHHHP.........' + '...',
+    '...' + '...........PP...........' + '...'
   ];
 
   var W = GRID[0].length, H = GRID.length;
@@ -85,24 +82,10 @@
     link.href = href;
   }
 
-  // Swap in assets/icon.png if it is actually there; the pixel art stays otherwise.
-  function useImage(onFound) {
-    var probe = new Image();
-    probe.onload = function () {
-      if (!probe.naturalWidth) return;
-      setFavicon(IMAGE_PATH);
-      onFound(IMAGE_PATH);
-    };
-    probe.src = IMAGE_PATH;
-  }
-
   function mount(host) {
     if (!host) return;
     host.innerHTML = svgMarkup(1);
     setFavicon(dataUri());
-    useImage(function (path) {
-      host.innerHTML = '<img src="' + path + '" alt="heartbeat">';
-    });
   }
 
   RG.icon = { svgMarkup: svgMarkup, dataUri: dataUri, mount: mount };

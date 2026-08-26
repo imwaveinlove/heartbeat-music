@@ -9,11 +9,12 @@
 (function () {
   'use strict';
 
-  // note = decoded length, not the mp3 header estimate (these files are VBR, so a
-  // constant-bitrate guess reads far too long).
+  // note = decoded length, floored the same way the in-game status line formats it
+  // (80.8s reads as 1:20, not 1:21) so the two never disagree. Do not take these
+  // from the mp3 header: the files are VBR and a bitrate guess reads far too long.
   var builtin = [
-    { id: 'niji-wo-koete-1', title: '虹を越えて', note: 'ver.1 · 1:13', file: 'songs/niji-wo-koete-1.mp3' },
-    { id: 'niji-wo-koete-2', title: '虹を越えて', note: 'ver.2 · 1:21', file: 'songs/niji-wo-koete-2.mp3' }
+    { id: 'koi-no-beat',   title: '恋のビート', note: '1:20', file: 'songs/koi-no-beat.mp3' },
+    { id: 'niji-wo-koete', title: '虹を越えて', note: '1:21', file: 'songs/niji-wo-koete.mp3' }
   ];
 
   function base64ToArrayBuffer(b64) {
