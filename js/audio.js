@@ -56,68 +56,62 @@
     return src;
   }
 
-  // Major pentatonic, so any combination of lanes hit together still sounds
-  // consonant. Sitting an octave up from a xylophone's range is what makes it read
-  // as glass rather than wood — it only works because the decay is this short.
-  var LANE_HZ = [783.99, 1046.50, 1318.51, 1567.98];   // G5 C6 E6 G6
+  // A key press is not a pitch, so lanes are told apart by resonance rather than by
+  // note: a slightly different case tone and click brightness each, the way keys in
+  // different positions on a board sound slightly different.
+  var LANE_BODY_HZ  = [240, 290, 350, 420];        // case / plate resonance
+  var LANE_CLICK_HZ = [5200, 5800, 6400, 7000];    // switch click brightness
 
-  // One partial of the chime. Octave-related partials (2f, 3f) stay glassy; the
-  // twelfth-heavy ratio a xylophone uses is what made the old sound woody.
-  function partial(c, freq, peak, decay, now, out) {
-    var osc = c.createOscillator();
-    var env = c.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, now);
-    env.gain.setValueAtTime(0.0001, now);
-    env.gain.exponentialRampToValueAtTime(peak, now + 0.002);
-    env.gain.exponentialRampToValueAtTime(0.0001, now + decay);
-    osc.connect(env).connect(out);
-    osc.start(now);
-    osc.stop(now + decay + 0.02);
-  }
-
-  // Three layers, all done inside ~0.2s: a soft click for contact, a bubbly upward
-  // blip for bounce, and a short sweet chime on top. Kept brief on purpose — this
-  // fires hundreds of times per song and anything longer turns into mush.
+  // A mechanical switch in three layers, all over inside ~70ms. Everything here is
+  // noise and a short thump — nothing sustains, which is exactly why it punches
+  // instead of blending into the music the way a tuned chime did.
   function tap(kind, lane) {
     var c = ctx();
     if (c.state !== 'running') return;
     var now = c.currentTime, out = hitBus();
-    var f = LANE_HZ[lane] || 1046.50;
-    var level = kind === 'perfect' ? 1 : kind === 'great' ? 0.82 : 0.64;
+    var body = LANE_BODY_HZ[lane] || 290;
+    var level = kind === 'perfect' ? 1 : kind === 'great' ? 0.85 : 0.68;
 
-    // Soft click. Band-passed rather than high-passed so it lands as a tick
-    // instead of a hiss.
-    var src = noise();
-    var bp = c.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = 3600;
-    bp.Q.value = 0.9;
+    // 1. The click itself: a couple of milliseconds of very bright noise.
+    var click = noise();
+    var hp = c.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = LANE_CLICK_HZ[lane] || 5800;
     var clickEnv = c.createGain();
     clickEnv.gain.setValueAtTime(0.0001, now);
-    clickEnv.gain.exponentialRampToValueAtTime(0.22 * level, now + 0.001);
-    clickEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.013);
-    src.connect(bp).connect(clickEnv).connect(out);
-    src.start(now);
-    src.stop(now + 0.02);
+    clickEnv.gain.exponentialRampToValueAtTime(0.5 * level, now + 0.0008);
+    clickEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.012);
+    click.connect(hp).connect(clickEnv).connect(out);
+    click.start(now);
+    click.stop(now + 0.02);
 
-    // Bubbly sparkle: a fast upward sweep. This is the part that makes the hit feel
-    // bouncy and playful rather than just bright.
-    var pop = c.createOscillator();
-    var popEnv = c.createGain();
-    pop.type = 'sine';
-    pop.frequency.setValueAtTime(f * 0.55, now);
-    pop.frequency.exponentialRampToValueAtTime(f * 1.02, now + 0.045);
-    popEnv.gain.setValueAtTime(0.0001, now);
-    popEnv.gain.exponentialRampToValueAtTime(0.34 * level, now + 0.004);
-    popEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.1);
-    pop.connect(popEnv).connect(out);
-    pop.start(now);
-    pop.stop(now + 0.12);
+    // 2. The "thock": noise rung through a narrow band. The high Q is what turns
+    // flat noise into a hollow plastic case rather than a hiss.
+    var shell = noise();
+    var bp = c.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = body;
+    bp.Q.value = 4.5;
+    var shellEnv = c.createGain();
+    shellEnv.gain.setValueAtTime(0.0001, now);
+    shellEnv.gain.exponentialRampToValueAtTime(0.75 * level, now + 0.002);
+    shellEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
+    shell.connect(bp).connect(shellEnv).connect(out);
+    shell.start(now);
+    shell.stop(now + 0.07);
 
-    partial(c, f,     0.30 * level, 0.20, now, out);   // chime body
-    partial(c, f * 2, 0.14 * level, 0.14, now, out);   // shine
-    partial(c, f * 3, 0.05 * level, 0.09, now, out);   // a touch of air
+    // 3. Bottom-out: a fast low thump so the press lands with weight.
+    var thump = c.createOscillator();
+    var thumpEnv = c.createGain();
+    thump.type = 'sine';
+    thump.frequency.setValueAtTime(body * 0.5, now);
+    thump.frequency.exponentialRampToValueAtTime(body * 0.32, now + 0.04);
+    thumpEnv.gain.setValueAtTime(0.0001, now);
+    thumpEnv.gain.exponentialRampToValueAtTime(0.4 * level, now + 0.003);
+    thumpEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
+    thump.connect(thumpEnv).connect(out);
+    thump.start(now);
+    thump.stop(now + 0.07);
   }
 
   function tapMiss() {
@@ -142,7 +136,11 @@
   // they are still on it without watching the tail. It sits an octave below the
   // struck notes so it never muddies the xylophone hits on top of it.
   var holdVoices = {};
-  function holdHz(lane) { return (LANE_HZ[lane] || 523.25) / 2; }
+  // The hold tone stays tonal even though the taps are not: it has to be
+  // distinguishable while it sustains, and a sustained noise would just be hiss.
+  // Pentatonic, low enough to sit under the key clicks rather than fight them.
+  var HOLD_HZ = [392.00, 523.25, 659.25, 783.99];   // G4 C5 E5 G5
+  function holdHz(lane) { return HOLD_HZ[lane] || 523.25; }
 
   function holdStart(lane) {
     var c = ctx();
