@@ -1,0 +1,149 @@
+  :root {
+    --bg: #07090f;
+    --panel: #12172a;
+    --line: #232a45;
+    --text: #eef1fa;
+    --dim: #858bab;
+    --l0: #ff4d6d;
+    --l1: #ffb020;
+    --l2: #21e6c1;
+    --l3: #6b8cff;
+    --perfect: #ffd23f;
+    --great: #21e6c1;
+    --good: #6b8cff;
+    --miss: #ff4d6d;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; width: 100%;
+    position: fixed; overscroll-behavior: none;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Pretendard, "Malgun Gothic", sans-serif;
+    overflow: hidden; touch-action: none; user-select: none;
+  }
+  #app {
+    position: relative; height: 100dvh; width: 100vw;
+    display: flex; flex-direction: column; align-items: center;
+    padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);
+  }
+
+  #hud {
+    width: 100%; max-width: 560px; display: flex; justify-content: space-between;
+    padding: calc(10px + env(safe-area-inset-top)) 18px 6px; z-index: 4;
+    flex: 0 0 auto;
+  }
+  .hb { text-align: center; }
+  .hl { font-size: 10px; color: var(--dim); letter-spacing: .1em; }
+  .hv { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #vScore { color: var(--text); }
+  #vCombo { color: var(--perfect); }
+  #vAcc { color: var(--great); }
+
+  #stageWrap { position: relative; flex: 1 1 auto; min-height: 0; width: 100%; max-width: 560px; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  #progress {
+    width: 100%; max-width: 560px; height: 3px; background: var(--line); position: relative;
+    flex: 0 0 auto; margin-bottom: env(safe-area-inset-bottom);
+  }
+  #progressFill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--l2), var(--l3)); }
+
+  .overlay {
+    position: absolute; inset: 0; z-index: 10;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 24px; text-align: center;
+    background: rgba(7,9,15,.94); backdrop-filter: blur(6px);
+    overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y;
+  }
+  .hidden { display: none !important; }
+  h1 {
+    margin: 0; font-size: 30px; letter-spacing: .04em;
+    background: linear-gradient(90deg, var(--l0), var(--l1), var(--l2), var(--l3));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .desc { color: var(--dim); font-size: 13px; line-height: 1.7; max-width: 340px; }
+  .btn {
+    border: none; border-radius: 999px; padding: 13px 30px; font-size: 15px; font-weight: 700;
+    color: #07090f; background: linear-gradient(90deg, var(--l2), var(--l3));
+    cursor: pointer; box-shadow: 0 6px 18px rgba(107,140,255,.3);
+  }
+  .btn:active { transform: scale(.97); }
+  .btn.ghost {
+    background: transparent; color: var(--text);
+    border: 1px solid var(--line); box-shadow: none;
+  }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+  .field { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  .field-label { font-size: 11px; color: var(--dim); letter-spacing: .08em; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .seg button {
+    background: transparent; border: none; color: var(--dim);
+    padding: 8px 16px; font-size: 13px; cursor: pointer; font-weight: 600;
+  }
+  .seg button.on { background: var(--panel); color: var(--text); }
+
+  input[type=range] { width: 220px; accent-color: var(--l2); }
+  .val { font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+  #fileName { font-size: 12px; color: var(--l2); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #loadStatus { font-size: 13px; color: var(--dim); min-height: 18px; }
+
+  #bar { width: 260px; height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; }
+  #barFill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--l1), var(--l2)); transition: width .15s; }
+
+  #grade { font-size: 60px; font-weight: 800; line-height: 1; }
+  #rScore { font-size: 34px; font-weight: 800; }
+  .stats { display: grid; grid-template-columns: repeat(4, auto); gap: 14px; font-size: 11px; color: var(--dim); }
+  .stats b { display: block; font-size: 17px; margin-bottom: 2px; }
+  #sP b { color: var(--perfect); } #sG b { color: var(--great); }
+  #sO b { color: var(--good); }   #sM b { color: var(--miss); }
+
+  #pauseBtn {
+    position: absolute; top: 8px; right: 10px; z-index: 5;
+    background: rgba(7,9,15,.6); border: 1px solid var(--line); color: var(--dim);
+    border-radius: 8px; padding: 8px 12px; font-size: 12px; cursor: pointer;
+  }
+  .note-small { font-size: 11px; color: var(--dim); }
+
+  /* ---- Landscape / short viewports: compress chrome, keep the lane tall ---- */
+  @media (max-height: 560px) {
+    #hud { padding: calc(4px + env(safe-area-inset-top)) 14px 2px; }
+    .hl { font-size: 9px; }
+    .hv { font-size: 15px; }
+    #stageWrap { max-width: 760px; }
+    #progress { max-width: 760px; }
+    #pauseBtn { padding: 5px 9px; font-size: 11px; }
+
+    .overlay { gap: 8px; padding: 12px 16px; justify-content: flex-start; }
+    h1 { font-size: 20px; }
+    .desc { font-size: 11px; line-height: 1.5; max-width: 460px; }
+    .btn { padding: 9px 20px; font-size: 13px; }
+    .field { flex-direction: row; align-items: center; gap: 10px; }
+    .field-label { font-size: 10px; }
+    input[type=range] { width: 170px; }
+    .seg button { padding: 6px 13px; font-size: 12px; }
+    #grade { font-size: 38px; }
+    #rScore { font-size: 24px; }
+    .stats { gap: 10px; font-size: 10px; }
+    .stats b { font-size: 14px; }
+    #loadStatus { font-size: 12px; min-height: 14px; }
+    .note-small { font-size: 10px; }
+  }
+
+  /* Very short (landscape phones): lay the menu out in two columns */
+  @media (max-height: 440px) and (orientation: landscape) {
+    .overlay { justify-content: center; }
+    #menuOverlay { display: grid; grid-template-columns: 1fr 1fr; align-content: center;
+                   gap: 6px 20px; padding: 10px 18px; }
+    #menuOverlay h1 { grid-column: 1 / -1; }
+    #menuOverlay .desc { display: none; }
+  }
+
+  /* Narrow phones in portrait */
+  @media (max-width: 400px) {
+    .hv { font-size: 18px; }
+    .desc { font-size: 12px; }
+    .btn { padding: 12px 22px; font-size: 14px; }
+    input[type=range] { width: 200px; }
+  }

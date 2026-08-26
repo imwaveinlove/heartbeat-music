@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>4KEY 리듬게임</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <div id="hud">
+    <div class="hb"><div class="hl">SCORE</div><div class="hv" id="vScore">0</div></div>
+    <div class="hb"><div class="hl">COMBO</div><div class="hv" id="vCombo">0</div></div>
+    <div class="hb"><div class="hl">ACCURACY</div><div class="hv" id="vAcc">100%</div></div>
+  </div>
+
+  <div id="stageWrap">
+    <canvas id="cv"></canvas>
+    <button id="pauseBtn" class="hidden">일시정지</button>
+  </div>
+  <div id="progress"><div id="progressFill"></div></div>
+
+  <!-- ===== Menu ===== -->
+  <div class="overlay" id="menuOverlay">
+    <h1>4KEY RHYTHM</h1>
+    <p class="desc">
+      직접 만든 음원 파일을 불러오면 저음·중저음·중고음·고음 대역을 분석해<br>
+      4개 레인에 자동으로 노트를 배치합니다.<br>
+      <b>D · F · J · K</b> 키 또는 화면 하단 버튼을 터치해 플레이하세요.
+    </p>
+
+    <div class="row">
+      <button class="btn" id="pickFileBtn">🎵 내 음원 불러오기</button>
+      <button class="btn ghost" id="demoBtn">데모 비트로 체험</button>
+    </div>
+    <input type="file" id="fileInput" accept="audio/*" style="display:none">
+    <div id="fileName"></div>
+
+    <div class="field">
+      <div class="field-label">난이도</div>
+      <div class="seg" id="diffSeg">
+        <button data-diff="easy">EASY</button>
+        <button data-diff="normal" class="on">NORMAL</button>
+        <button data-diff="hard">HARD</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">노트 속도 <span class="val" id="speedVal">1.0x</span></div>
+      <input type="range" id="speedRange" min="0.5" max="2.5" step="0.1" value="1.0">
+    </div>
+
+    <div class="field">
+      <div class="field-label">싱크 보정 <span class="val" id="offsetVal">0 ms</span></div>
+      <input type="range" id="offsetRange" min="-300" max="300" step="10" value="0">
+      <div class="note-small">노트가 음악보다 빠르면 +, 느리면 −</div>
+    </div>
+
+    <div id="loadStatus"></div>
+    <div id="bar" class="hidden"><div id="barFill"></div></div>
+    <button class="btn hidden" id="playBtn">▶ 플레이</button>
+    <button class="btn ghost hidden" id="fsBtn">⛶ 전체화면</button>
+  </div>
+
+  <!-- ===== Pause ===== -->
+  <div class="overlay hidden" id="pauseOverlay">
+    <h1>일시정지</h1>
+    <div class="row">
+      <button class="btn" id="resumeBtn">계속하기</button>
+      <button class="btn ghost" id="quitBtn">메뉴로</button>
+    </div>
+  </div>
+
+  <!-- ===== Result ===== -->
+  <div class="overlay hidden" id="resultOverlay">
+    <div class="hl">RESULT</div>
+    <div id="grade">S</div>
+    <div id="rScore">0</div>
+    <div class="val" id="rAcc">정확도 100.00% · 최대 콤보 0</div>
+    <div class="stats">
+      <span id="sP"><b>0</b>PERFECT</span>
+      <span id="sG"><b>0</b>GREAT</span>
+      <span id="sO"><b>0</b>GOOD</span>
+      <span id="sM"><b>0</b>MISS</span>
+    </div>
+    <div class="val" id="rBest"></div>
+    <div class="row">
+      <button class="btn" id="againBtn">다시 하기</button>
+      <button class="btn ghost" id="menuBtn">메뉴로</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Load order matters: each file registers itself on the shared RG namespace,
+     and every file below depends on the ones above it.
+     Plain scripts (not ES modules) so this runs from file:// with no server. -->
+<script src="js/config.js"></script>
+<script src="js/dom.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/chart.js"></script>
+<script src="js/render.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
