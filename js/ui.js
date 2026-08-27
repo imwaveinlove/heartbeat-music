@@ -92,8 +92,9 @@
   });
 
   // ---------- tab audio capture ----------
-  // Only offered where the browser can actually do it; Safari cannot capture
-  // tab audio at all, so the button stays hidden there rather than failing later.
+  // Desktop only. getDisplayMedia does not exist on any mobile browser — screen
+  // capture there is an OS permission, not something a page can ask for — so on a
+  // phone this button stays hidden rather than failing after the player taps it.
   if (RG.capture.supported()) el.captureBtn.classList.remove('hidden');
 
   function showCapturePanel(on) {
