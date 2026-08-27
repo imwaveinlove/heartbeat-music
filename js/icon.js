@@ -15,38 +15,37 @@
     D: '#9aa0b4'    // headphone shade
   };
 
-  // 40 x 22. '.' is transparent.
-  // Columns 0-7 and 32-39 are the wings; the cat head and heart face take the 24
+  // 32 x 22. '.' is transparent.
+  // Columns 0-3 and 28-31 are the wings; the cat head and heart face take the 24
   // columns between them.
   //
-  // The wings are deliberately blunt. An earlier version came to a single-pixel
-  // point at the top outer corner, which read as a horn rather than a feather —
-  // soft cartoon wings have rounded ends. Each one is a long rounded sweep with a
-  // single pink line inside; at this size that line reads as a feather split,
-  // while a wider notch just breaks the wing into two disconnected blobs.
+  // The wings are small and blunt-ended on purpose. Pointed tips read as horns
+  // rather than feathers, so every end is rounded. There is no feather line inside
+  // them: at four columns wide a dividing line looks like a chip out of the edge
+  // rather than a split between feathers, and the shape stays cleaner without it.
   var GRID = [
-    '........' + '.....PP..........PP.....' + '........',
-    '........' + '....PWWP........PWWP....' + '........',
-    '........' + '...PWWWWP......PWWWWP...' + '........',
-    '..PPP...' + '..PWWWWWWWP..PWWWWWWWP..' + '...PPP..',
-    '.PWWWP..' + '..PWWWWWWWWWWWWWWWWWWP..' + '..PWWWP.',
-    'PWWWWWP.' + '.PWWWWWWWWWWWWWWWWWWWWP.' + '.PWWWWWP',
-    'PWWWWWWP' + '.PWWWWWWWWWWWWWWWWWWWWP.' + 'PWWWWWWP',
-    'PWWWWWWW' + '.PWWPPPPPPPPPPPPPPPPWWP.' + 'WWWWWWWP',
-    'PWWWWWWW' + 'GPWPHHHHHHHHHHHHHHHHPWPG' + 'WWWWWWWP',
-    '.PWPWWWW' + 'GGPHHHHHHHHHHHHHHHHHHPGG' + 'WWWWPWP.',
-    '.PPWWWWW' + 'GDPHHHHHHHHHHHHHHHHHHPDG' + 'WWWWWPP.',
-    '..PWWWWW' + 'GDPHHHPHHPHHHHPHHPHHHPDG' + 'WWWWWP..',
-    '...PWWWW' + 'GDPHHHHPPHHHHHHPPHHHHPDG' + 'WWWWP...',
-    '....PPPP' + 'GDPHHHHHHHHHHHHHHHHHHPDG' + 'PPPP....',
-    '........' + 'GGPHHHHHHPHPPHPHHHHHHPGG' + '........',
-    '........' + 'GPPHHHHHHHPHHPHHHHHHHPPG' + '........',
-    '........' + '..PHHHHHHHHHHHHHHHHHHP..' + '........',
-    '........' + '...PHHHHHHHHHHHHHHHHP...' + '........',
-    '........' + '.....PHHHHHHHHHHHHP.....' + '........',
-    '........' + '.......PHHHHHHHHP.......' + '........',
-    '........' + '.........PHHHHP.........' + '........',
-    '........' + '...........PP...........' + '........'
+    '....' + '.....PP..........PP.....' + '....',
+    '....' + '....PWWP........PWWP....' + '....',
+    '....' + '...PWWWWP......PWWWWP...' + '....',
+    '....' + '..PWWWWWWWP..PWWWWWWWP..' + '....',
+    '....' + '..PWWWWWWWWWWWWWWWWWWP..' + '....',
+    '.PP.' + '.PWWWWWWWWWWWWWWWWWWWWP.' + '.PP.',
+    'PWWP' + '.PWWWWWWWWWWWWWWWWWWWWP.' + 'PWWP',
+    'PWWW' + '.PWWPPPPPPPPPPPPPPPPWWP.' + 'WWWP',
+    'PWWW' + 'GPWPHHHHHHHHHHHHHHHHPWPG' + 'WWWP',
+    'PWWW' + 'GGPHHHHHHHHHHHHHHHHHHPGG' + 'WWWP',
+    '.PWW' + 'GDPHHHHHHHHHHHHHHHHHHPDG' + 'WWP.',
+    '..PP' + 'GDPHHHPHHPHHHHPHHPHHHPDG' + 'PP..',
+    '....' + 'GDPHHHHPPHHHHHHPPHHHHPDG' + '....',
+    '....' + 'GDPHHHHHHHHHHHHHHHHHHPDG' + '....',
+    '....' + 'GGPHHHHHHPHPPHPHHHHHHPGG' + '....',
+    '....' + 'GPPHHHHHHHPHHPHHHHHHHPPG' + '....',
+    '....' + '..PHHHHHHHHHHHHHHHHHHP..' + '....',
+    '....' + '...PHHHHHHHHHHHHHHHHP...' + '....',
+    '....' + '.....PHHHHHHHHHHHHP.....' + '....',
+    '....' + '.......PHHHHHHHHP.......' + '....',
+    '....' + '.........PHHHHP.........' + '....',
+    '....' + '...........PP...........' + '....'
   ];
 
   var W = GRID[0].length, H = GRID.length;
