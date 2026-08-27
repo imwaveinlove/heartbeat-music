@@ -18,13 +18,17 @@
   // newer request win, so a slow earlier one cannot overwrite the current chart.
   var analysisToken = 0;
 
-  function prepare(buffer, label) {
+  // sourceId is the built-in track's id, or null when the audio came from a file
+  // or a tab recording — that is what decides which button shows as selected.
+  function prepare(buffer, label, sourceId) {
     var token = ++analysisToken;
     RG.song.buffer = buffer;
     RG.song.label = label;
+    RG.song.id = sourceId || null;
     RG.song.chart = null;
 
-    el.fileName.textContent = label;
+    paintSongSelection(RG.song.id);
+    el.fileName.textContent = '▶ ' + label;
     el.playBtn.classList.add('hidden');
     setStatus('채보 분석 중...');
     setBar(0);
@@ -51,12 +55,22 @@
   }
 
   // ---------- built-in tracks ----------
+  var songButtons = [];
+
+  // Which track is loaded is otherwise invisible until the song starts playing.
+  function paintSongSelection(id) {
+    songButtons.forEach(function (entry) {
+      entry.button.classList.toggle('on', entry.id === id);
+    });
+  }
+
   RG.songs.builtin.forEach(function (track) {
     var b = document.createElement('button');
     b.className = 'btn ghost song-btn';
     b.innerHTML = '<span>' + track.title + '</span><small>' + track.note + '</small>';
     b.addEventListener('click', function () {
       RG.audio.ctx();                        // unlock audio inside the tap
+      paintSongSelection(track.id);          // mark it now; decoding takes a moment
       setStatus('수록곡 불러오는 중...');
       setBar(null);
       el.playBtn.classList.add('hidden');
@@ -64,10 +78,11 @@
       // the thread. setTimeout, not rAF: rAF never fires while the tab is hidden.
       setTimeout(function () {
         RG.songs.load(track)
-          .then(function (buf) { return prepare(buf, track.title + ' ' + track.note); })
-          .catch(function (err) { setStatus(err.message); });
+          .then(function (buf) { return prepare(buf, track.title + ' ' + track.note, track.id); })
+          .catch(function (err) { paintSongSelection(null); setStatus(err.message); });
       }, 0);
     });
+    songButtons.push({ id: track.id, button: b });
     el.songRow.appendChild(b);
   });
 
@@ -138,7 +153,8 @@
     Array.prototype.forEach.call(el.diffSeg.children, function (c) {
       c.classList.toggle('on', c === b);
     });
-    if (RG.song.buffer) prepare(RG.song.buffer, RG.song.label);   // re-chart
+    // keep the same source id so re-charting does not clear the selected song
+    if (RG.song.buffer) prepare(RG.song.buffer, RG.song.label, RG.song.id);
   });
 
   // Input mode changes the chart itself, so it re-charts exactly like difficulty.
@@ -154,7 +170,7 @@
     if (!b) return;
     RG.settings.mobile = b.dataset.mobile === '1';
     paintInputSeg();
-    if (RG.song.buffer) prepare(RG.song.buffer, RG.song.label);
+    if (RG.song.buffer) prepare(RG.song.buffer, RG.song.label, RG.song.id);
   });
 
   el.speedRange.addEventListener('input', function () {
