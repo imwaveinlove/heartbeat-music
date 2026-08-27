@@ -112,6 +112,10 @@
   // Resolves to [{time, lane, hit, judged}], sorted by time.
   function build(buffer, diffKey, onProgress) {
     var cfg = C.DIFFS[diffKey];
+    var mobile = !!RG.settings.mobile;
+    // A tail pins one of only two thumbs, leaving a single thumb for everything
+    // else — so on a phone a hold always plays alone, whatever the difficulty says.
+    var soloHold = cfg.soloHold || mobile;
     var all = [];
     var laneIndex = 0;
 
@@ -140,7 +144,7 @@
       // satisfy the spacing rules, until the difficulty's note budget is full.
       // (Trimming to budget *before* spacing would drop notes twice and leave
       // the chart far sparser than the difficulty asks for.)
-      var budget = Math.round(buffer.duration * cfg.nps);
+      var budget = Math.round(buffer.duration * cfg.nps * (mobile ? C.MOBILE.npsScale : 1));
       all.sort(function (a, b) { return b.strength - a.strength; });
 
       var laneTimes = [[], [], [], []], globalTimes = [], chosen = [];
@@ -149,6 +153,10 @@
         if (nt.time < 0.35) continue;                      // skip the very intro
         if (nearestGap(laneTimes[nt.lane], nt.time) < cfg.laneGap) continue;
         if (nearestGap(globalTimes, nt.time) < cfg.globalGap) continue;
+        // On a phone one thumb owns lanes 0-1 and the other lanes 2-3, so a note is
+        // only reachable if that thumb is not still busy with its sibling lane.
+        // (lane ^ 1 is the other lane on the same side.)
+        if (mobile && nearestGap(laneTimes[nt.lane ^ 1], nt.time) < C.MOBILE.handGap) continue;
         insertSorted(laneTimes[nt.lane], nt.time);
         insertSorted(globalTimes, nt.time);
         chosen.push({
@@ -183,7 +191,7 @@
         var anyRoom = nextAny === null
           ? cfg.holdMax
           : Math.max(0, nextAny - n.time - cfg.globalGap);
-        n.maxTail = cfg.soloHold ? Math.min(laneRoom, anyRoom) : laneRoom;
+        n.maxTail = soloHold ? Math.min(laneRoom, anyRoom) : laneRoom;
         nextInLane[n.lane] = n.time;
         nextAny = n.time;
       }

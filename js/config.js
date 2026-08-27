@@ -16,6 +16,15 @@ RG.config = {
   WINDOWS: { perfect: 0.045, great: 0.090, good: 0.145, miss: 0.190 },
   SCORES:  { perfect: 300, great: 200, good: 100 },
 
+  // Phone charts are a different instrument. On a keyboard four fingers rest on
+  // four keys and any lane can be hit instantly; on a phone two thumbs cover four
+  // lanes, so a thumb has to travel between the two lanes on its side and can
+  // never hit both at once. A chart tuned for the keyboard is unplayable there.
+  MOBILE: {
+    npsScale: 0.65,   // two thumbs simply cannot cover as much
+    handGap: 0.17     // time a thumb needs to move between its own two lanes
+  },
+
   // Per-difficulty limits live in DIFFS; these apply to every chart.
   HOLD: {
     MIN: 0.34,           // shorter than this plays as a tap, not a hold
@@ -54,7 +63,15 @@ RG.config = {
 };
 
 // Player-adjustable settings, shared across modules.
-RG.settings = { diff: 'normal', speed: 1.0, offset: 0 };
+// mobile defaults to whatever the device looks like, but stays overridable: a
+// tablet with a keyboard, or a phone the player wants the denser chart on.
+RG.settings = {
+  diff: 'normal', speed: 1.0, offset: 0,
+  mobile: (function () {
+    try { return window.matchMedia('(pointer: coarse)').matches; }
+    catch (e) { return false; }
+  })()
+};
 
 // The loaded song and its generated chart.
 RG.song = { buffer: null, label: '', chart: null };

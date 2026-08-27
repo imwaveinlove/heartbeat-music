@@ -93,7 +93,6 @@
     // The head is judged like any tap; the tail is a separate promise to keep.
     if (best.hold) {
       current.activeHolds[lane] = best;
-      RG.audio.holdStart(lane);
     }
   }
 
@@ -103,7 +102,6 @@
     var note = current.activeHolds[lane];
     if (!note) return;
     current.activeHolds[lane] = null;
-    RG.audio.holdStop(lane);
 
     if (songTime() >= note.holdEnd - C.HOLD.RELEASE_GRACE) {
       completeHold(note, lane);
@@ -144,7 +142,6 @@
       var held = current.activeHolds[h];
       if (held && t >= held.holdEnd) {
         current.activeHolds[h] = null;
-        RG.audio.holdStop(h);
         completeHold(held, h);
       }
     }
@@ -195,10 +192,8 @@
     rafId = requestAnimationFrame(loop);
   }
 
-  // Drop any tails in progress without penalty — a pause or a quit is not a miss,
-  // and a hold tone left running would drone on over the menu.
+  // Drop any tails in progress without penalty — a pause or a quit is not a miss.
   function clearHolds() {
-    RG.audio.holdStopAll();
     if (current) current.activeHolds = [null, null, null, null];
     fx.keyHeld = [false, false, false, false];
   }

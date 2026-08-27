@@ -140,6 +140,22 @@
     if (RG.song.buffer) prepare(RG.song.buffer, RG.song.label);   // re-chart
   });
 
+  // Input mode changes the chart itself, so it re-charts exactly like difficulty.
+  function paintInputSeg() {
+    Array.prototype.forEach.call(el.inputSeg.children, function (c) {
+      c.classList.toggle('on', (c.dataset.mobile === '1') === !!RG.settings.mobile);
+    });
+  }
+  paintInputSeg();
+
+  el.inputSeg.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    RG.settings.mobile = b.dataset.mobile === '1';
+    paintInputSeg();
+    if (RG.song.buffer) prepare(RG.song.buffer, RG.song.label);
+  });
+
   el.speedRange.addEventListener('input', function () {
     RG.settings.speed = parseFloat(el.speedRange.value);
     el.speedVal.textContent = RG.settings.speed.toFixed(1) + 'x';

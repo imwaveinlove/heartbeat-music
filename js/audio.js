@@ -56,62 +56,66 @@
     return src;
   }
 
-  // A key press is not a pitch, so lanes are told apart by resonance rather than by
-  // note: a slightly different case tone and click brightness each, the way keys in
-  // different positions on a board sound slightly different.
-  var LANE_BODY_HZ  = [240, 290, 350, 420];        // case / plate resonance
-  var LANE_CLICK_HZ = [5200, 5800, 6400, 7000];    // switch click brightness
+  // Jingle bands, one per lane. A tambourine has no pitch to speak of, so lanes are
+  // told apart by how bright their shimmer sits rather than by note.
+  var LANE_JINGLE_HZ = [3200, 3700, 4300, 5000];
 
-  // A mechanical switch in three layers, all over inside ~70ms. Everything here is
-  // noise and a short thump — nothing sustains, which is exactly why it punches
-  // instead of blending into the music the way a tuned chime did.
+  // Small metal discs ring at ratios that are deliberately not whole numbers —
+  // that inharmonicity is what makes a jingle sound like metal instead of a chime.
+  var JINGLE_RATIOS = [1, 1.42, 1.87, 2.34];
+
+  // A tambourine strike in two parts, done inside ~150ms: the shimmer of the
+  // jingles and a soft hand contact underneath.
   function tap(kind, lane) {
     var c = ctx();
     if (c.state !== 'running') return;
     var now = c.currentTime, out = hitBus();
-    var body = LANE_BODY_HZ[lane] || 290;
+    var base = LANE_JINGLE_HZ[lane] || 3700;
     var level = kind === 'perfect' ? 1 : kind === 'great' ? 0.85 : 0.68;
 
-    // 1. The click itself: a couple of milliseconds of very bright noise.
-    var click = noise();
-    var hp = c.createBiquadFilter();
-    hp.type = 'highpass';
-    hp.frequency.value = LANE_CLICK_HZ[lane] || 5800;
-    var clickEnv = c.createGain();
-    clickEnv.gain.setValueAtTime(0.0001, now);
-    clickEnv.gain.exponentialRampToValueAtTime(0.5 * level, now + 0.0008);
-    clickEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.012);
-    click.connect(hp).connect(clickEnv).connect(out);
-    click.start(now);
-    click.stop(now + 0.02);
-
-    // 2. The "thock": noise rung through a narrow band. The high Q is what turns
-    // flat noise into a hollow plastic case rather than a hiss.
-    var shell = noise();
+    // 1. Jingle shimmer: bright noise, rung and left to decay. Slightly longer than
+    // a click because the discs keep rattling after the hit.
+    var shimmer = noise();
     var bp = c.createBiquadFilter();
     bp.type = 'bandpass';
-    bp.frequency.value = body;
-    bp.Q.value = 4.5;
-    var shellEnv = c.createGain();
-    shellEnv.gain.setValueAtTime(0.0001, now);
-    shellEnv.gain.exponentialRampToValueAtTime(0.75 * level, now + 0.002);
-    shellEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
-    shell.connect(bp).connect(shellEnv).connect(out);
-    shell.start(now);
-    shell.stop(now + 0.07);
+    bp.frequency.value = base * 1.6;
+    bp.Q.value = 0.8;
+    var shimmerEnv = c.createGain();
+    shimmerEnv.gain.setValueAtTime(0.0001, now);
+    shimmerEnv.gain.exponentialRampToValueAtTime(0.55 * level, now + 0.002);
+    shimmerEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
+    shimmer.connect(bp).connect(shimmerEnv).connect(out);
+    shimmer.start(now);
+    shimmer.stop(now + 0.15);
 
-    // 3. Bottom-out: a fast low thump so the press lands with weight.
-    var thump = c.createOscillator();
-    var thumpEnv = c.createGain();
-    thump.type = 'sine';
-    thump.frequency.setValueAtTime(body * 0.5, now);
-    thump.frequency.exponentialRampToValueAtTime(body * 0.32, now + 0.04);
-    thumpEnv.gain.setValueAtTime(0.0001, now);
-    thumpEnv.gain.exponentialRampToValueAtTime(0.4 * level, now + 0.003);
-    thumpEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
-    thump.connect(thumpEnv).connect(out);
-    thump.start(now);
-    thump.stop(now + 0.07);
+    // 2. The discs themselves: a few inharmonic partials, each fading at its own
+    // rate so the shimmer breaks up instead of ringing as one tone.
+    for (var i = 0; i < JINGLE_RATIOS.length; i++) {
+      var osc = c.createOscillator();
+      var env = c.createGain();
+      var decay = 0.05 + i * 0.022;
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(base * JINGLE_RATIOS[i], now);
+      env.gain.setValueAtTime(0.0001, now);
+      env.gain.exponentialRampToValueAtTime((0.14 - i * 0.025) * level, now + 0.002);
+      env.gain.exponentialRampToValueAtTime(0.0001, now + decay);
+      osc.connect(env).connect(out);
+      osc.start(now);
+      osc.stop(now + decay + 0.02);
+    }
+
+    // 3. Hand contact: a soft low-mid thud so the hit has a body under the shimmer.
+    var hand = noise();
+    var lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 900;
+    var handEnv = c.createGain();
+    handEnv.gain.setValueAtTime(0.0001, now);
+    handEnv.gain.exponentialRampToValueAtTime(0.3 * level, now + 0.002);
+    handEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+    hand.connect(lp).connect(handEnv).connect(out);
+    hand.start(now);
+    hand.stop(now + 0.06);
   }
 
   function tapMiss() {
@@ -132,48 +136,11 @@
   }
 
   // ---------- hold notes ----------
-  // A quiet tone runs for as long as a hold is kept, so the player can hear that
-  // they are still on it without watching the tail. It sits an octave below the
-  // struck notes so it never muddies the xylophone hits on top of it.
-  var holdVoices = {};
-  // The hold tone stays tonal even though the taps are not: it has to be
-  // distinguishable while it sustains, and a sustained noise would just be hiss.
-  // Pentatonic, low enough to sit under the key clicks rather than fight them.
+  // No sound runs while a hold is being kept: a sustained tone sat badly against
+  // the music and fought the tambourine hits landing on top of it. The tail's own
+  // shrinking bar is the feedback; only completing it makes a sound.
   var HOLD_HZ = [392.00, 523.25, 659.25, 783.99];   // G4 C5 E5 G5
   function holdHz(lane) { return HOLD_HZ[lane] || 523.25; }
-
-  function holdStart(lane) {
-    var c = ctx();
-    if (c.state !== 'running' || holdVoices[lane]) return;
-    var now = c.currentTime;
-    var osc = c.createOscillator();
-    var env = c.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(holdHz(lane), now);
-    env.gain.setValueAtTime(0.0001, now);
-    env.gain.exponentialRampToValueAtTime(0.16, now + 0.03);
-    osc.connect(env).connect(hitBus());
-    osc.start(now);
-    holdVoices[lane] = { osc: osc, env: env };
-  }
-
-  function holdStop(lane) {
-    var v = holdVoices[lane];
-    if (!v) return;
-    delete holdVoices[lane];
-    var c = ctx();
-    var now = c.currentTime;
-    try {
-      v.env.gain.cancelScheduledValues(now);
-      v.env.gain.setValueAtTime(Math.max(v.env.gain.value, 0.0001), now);
-      v.env.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
-      v.osc.stop(now + 0.07);
-    } catch (e) {}
-  }
-
-  function holdStopAll() {
-    Object.keys(holdVoices).forEach(function (lane) { holdStop(lane); });
-  }
 
   // Bright confirmation when a hold is carried all the way to its tail.
   function holdComplete(lane) {
@@ -195,7 +162,6 @@
 
   RG.audio = {
     ctx: ctx, tap: tap, tapMiss: tapMiss,
-    holdStart: holdStart, holdStop: holdStop, holdStopAll: holdStopAll,
     holdComplete: holdComplete
   };
 })();

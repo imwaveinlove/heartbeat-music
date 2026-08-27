@@ -25,7 +25,7 @@
     fileName: $('fileName'), loadStatus: $('loadStatus'), bar: $('bar'), barFill: $('barFill'),
 
     // Settings
-    diffSeg: $('diffSeg'),
+    diffSeg: $('diffSeg'), inputSeg: $('inputSeg'),
     speedRange: $('speedRange'), speedVal: $('speedVal'),
     offsetRange: $('offsetRange'), offsetVal: $('offsetVal'),
 
