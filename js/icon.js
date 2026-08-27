@@ -1,13 +1,26 @@
 /* icon.js — the heartbeat♡ mascot, drawn as pixel art from a character grid.
  *
  * Kept as a grid rather than a binary image so it scales to any size, stays
- * editable, and needs no file alongside index.html. Rendered to an SVG data URI
- * for the favicon and injected inline as the menu logo.
+ * editable, and needs no file alongside the page. Rendered to an SVG data URI for
+ * the favicon and injected inline as a logo.
+ *
+ * Standalone: this file has no dependencies and can be dropped into any project.
+ *
+ *   <script src="icon.js"></script>
+ *   <script>
+ *     HeartbeatIcon.mount(document.getElementById('logo'));         // logo + favicon
+ *     HeartbeatIcon.mount(el, { favicon: false });                  // logo only
+ *     HeartbeatIcon.mount(el, { colors: { P: '#000', W: '#fff' } }); // recoloured
+ *     img.src = HeartbeatIcon.dataUri();                            // as an image
+ *   </script>
+ *
+ * It also registers itself as RG.icon when that namespace exists, which is how
+ * this game uses it.
  */
-(function () {
+(function (root) {
   'use strict';
 
-  var COLORS = {
+  var DEFAULTS = {
     P: '#ff2e88',   // hot pink outline
     W: '#ffffff',   // white head
     H: '#ffb3d9',   // light pink heart face
@@ -50,8 +63,20 @@
 
   var W = GRID[0].length, H = GRID.length;
 
-  function svgMarkup(scale) {
-    var px = scale || 1;
+  function palette(overrides) {
+    if (!overrides) return DEFAULTS;
+    var out = {};
+    for (var k in DEFAULTS) if (DEFAULTS.hasOwnProperty(k)) out[k] = DEFAULTS[k];
+    for (var o in overrides) if (overrides.hasOwnProperty(o)) out[o] = overrides[o];
+    return out;
+  }
+
+  // opts: { colors, scale }. Scale only changes the coordinate numbers written into
+  // the markup; the SVG scales to whatever CSS gives it either way.
+  function svgMarkup(opts) {
+    opts = opts || {};
+    var px = opts.scale || 1;
+    var colors = palette(opts.colors);
     var out = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' +
               (W * px) + ' ' + (H * px) + '" shape-rendering="crispEdges">';
     for (var y = 0; y < H; y++) {
@@ -65,15 +90,15 @@
         while (x + run < W && row.charAt(x + run) === ch) run++;
         out += '<rect x="' + (x * px) + '" y="' + (y * px) +
                '" width="' + (run * px) + '" height="' + px +
-               '" fill="' + COLORS[ch] + '"/>';
+               '" fill="' + colors[ch] + '"/>';
         x += run;
       }
     }
     return out + '</svg>';
   }
 
-  function dataUri() {
-    return 'data:image/svg+xml,' + encodeURIComponent(svgMarkup(1));
+  function dataUri(opts) {
+    return 'data:image/svg+xml,' + encodeURIComponent(svgMarkup(opts));
   }
 
   function setFavicon(href) {
@@ -87,11 +112,32 @@
     link.href = href;
   }
 
-  function mount(host) {
+  // opts: { colors, favicon }. favicon defaults to true — pass false to place the
+  // logo without touching the tab icon.
+  function mount(host, opts) {
     if (!host) return;
-    host.innerHTML = svgMarkup(1);
-    setFavicon(dataUri());
+    opts = opts || {};
+    host.innerHTML = svgMarkup(opts);
+    if (opts.favicon !== false) setFavicon(dataUri(opts));
   }
 
-  RG.icon = { svgMarkup: svgMarkup, dataUri: dataUri, mount: mount };
-})();
+  var api = {
+    svgMarkup: svgMarkup,
+    dataUri: dataUri,
+    setFavicon: setFavicon,
+    mount: mount,
+    colors: DEFAULTS,
+    size: { width: W, height: H }       // in cells, not pixels
+  };
+
+  // Handed out fresh on every read. Exposing one shared array instead would let a
+  // caller that edits it break the grid for every other caller — a single slice at
+  // startup protects the renderer's own copy but not the one handed out.
+  Object.defineProperty(api, 'grid', {
+    enumerable: true,
+    get: function () { return GRID.slice(); }
+  });
+
+  root.HeartbeatIcon = api;
+  if (root.RG) root.RG.icon = api;      // this game's namespace, when present
+})(typeof window !== 'undefined' ? window : this);

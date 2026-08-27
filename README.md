@@ -143,6 +143,34 @@
 
 레인 구분은 음정이 아니라 징글 대역(3200·3700·4300·5000Hz)으로 합니다.
 
+## 아이콘을 다른 프로젝트에서 쓰기
+
+`js/icon.js` 는 의존성이 없는 단독 파일입니다. 그대로 복사해 넣으면 됩니다.
+
+```html
+<script src="icon.js"></script>
+<script>
+  HeartbeatIcon.mount(document.getElementById('logo'));          // 로고 + 파비콘
+  HeartbeatIcon.mount(el, { favicon: false });                   // 로고만
+  HeartbeatIcon.mount(el, { colors: { P: '#000', W: '#fff' } }); // 색 바꿔서
+  img.src = HeartbeatIcon.dataUri();                             // 이미지로
+</script>
+```
+
+| 항목 | 설명 |
+|------|------|
+| `svgMarkup(opts)` | SVG 문자열. `opts`: `{ colors, scale }` |
+| `dataUri(opts)` | `data:image/svg+xml,...` — `img.src` 나 CSS `url()` 에 |
+| `mount(host, opts)` | `host` 안에 SVG를 넣습니다. `favicon: false` 면 탭 아이콘은 건드리지 않습니다 |
+| `setFavicon(href)` | 파비콘만 따로 교체 |
+| `grid` | 문자 그리드 (읽을 때마다 새 복사본) |
+| `colors` | 기본 팔레트 |
+| `size` | `{ width, height }` — 픽셀이 아니라 칸 수 |
+
+`colors` 는 넘긴 키만 덮어씁니다. 일부만 바꿔도 나머지는 기본값이 유지되고, 호출마다 독립적이라 한 번 바꿔도 다음 호출에 남지 않습니다.
+
+`RG` 네임스페이스가 있으면 `RG.icon` 으로도 등록됩니다. 이 게임이 그렇게 씁니다.
+
 ## 아이콘 내보내기
 
 마스코트는 `js/icon.js` 의 문자 그리드가 원본이고, 페이지는 그걸 SVG로 그려 로고와 파비콘에 씁니다. 다른 곳에 쓸 PNG가 필요하면:
