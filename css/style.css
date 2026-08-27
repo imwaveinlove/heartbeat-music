@@ -111,7 +111,10 @@ canvas { display: block; width: 100%; height: 100%; }
 /* ---------- Logo + title ---------- */
 #logo { line-height: 0; filter: drop-shadow(0 4px 0 rgba(255,156,201,.55)); }
 #logo svg, #logo img {
-  width: 104px; height: auto; display: block;
+  /* Sized so the head stays the size it was before the wings widened the grid
+     from 30 to 36 columns: 104 x 36/30. Scaling by width alone would have shrunk
+     the body to make room for them. */
+  width: 124px; height: auto; display: block;
   image-rendering: pixelated; image-rendering: crisp-edges;
 }
 h1 {
@@ -244,7 +247,7 @@ input[type=range] { width: 220px; accent-color: var(--pink); }
   #pauseBtn { padding: 5px 11px; font-size: 11px; }
 
   .overlay { gap: 8px; padding: 12px 16px; justify-content: flex-start; }
-  #logo svg, #logo img { width: 56px; }
+  #logo svg, #logo img { width: 67px; }
   h1 { font-size: 22px; }
   .desc { font-size: 11px; line-height: 1.5; max-width: 460px; }
   .btn { padding: 9px 20px; font-size: 13px; }
