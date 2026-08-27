@@ -25,7 +25,9 @@
     W: '#ffffff',   // white head
     H: '#ffb3d9',   // light pink heart face
     G: '#c7cbd9',   // headphone cup
-    D: '#9aa0b4'    // headphone shade
+    D: '#9aa0b4',   // headphone shade
+    K: '#0d0d14',   // companion's near-black ears and outline
+    N: '#3a3f63'    // companion's navy eye blocks
   };
 
   // 36 x 22. '.' is transparent.
@@ -61,7 +63,46 @@
     '......' + '...........PP...........' + '......'
   ];
 
-  var W = GRID[0].length, H = GRID.length;
+  // 24 x 22. The cat's companion: dark ears, navy square eyes, and the same heart
+  // body, but with the lower outline drawn as separated pixels rather than a solid
+  // edge — that dotted taper is what tells the two characters apart at a glance.
+  var COMPANION = [
+    '..KKKKKKK......KKKKKKK..',
+    '.KKKKKKKKK....KKKKKKKKK.',
+    '.KKKKKKKKK....KKKKKKKKK.',
+    '.KKKKKKKKKK..KKKKKKKKKK.',
+    '.KKKKKKKKKKKKKKKKKKKKKK.',
+    '.KWWWWWWWWWWWWWWWWWWWWK.',
+    '.KWWWWWWWWWWWWWWWWWWWWK.',
+    'GDKWWWWWWWWWWWWWWWWWWKDG',
+    'GDKWNNNNNNWWWWNNNNNNWKDG',
+    'GDKWNWNNWNWWWWNWNNWNWKDG',
+    'GDKWNNNNNNWWWWNNNNNNWKDG',
+    'GDKWNWWWWNWWWWNWWWWNWKDG',
+    'GDKWNNNNNNWWWWNNNNNNWKDG',
+    'GDKWWWWWWWKKKKWWWWWWWKDG',
+    'GDKWWWWWWWWKKWWWWWWWWKDG',
+    'GDKWWWWWWWWWWWWWWWWWWKDG',
+    '..KWWWWWWWWWWWWWWWWWWK..',
+    '...K.WWWWWWWWWWWWWW.K...',
+    '.....K.WWWWWWWWWW.K.....',
+    '.......K.WWWWWW.K.......',
+    '.........K.WW.K.........',
+    '...........KK...........'
+  ];
+
+  var W = GRID[0].length, H = GRID.length;   // one character, in cells
+
+  var PAIR_GAP = 2;   // transparent columns between the two characters
+
+  // The pair, companion on the left. Both grids are the same height, so the rows
+  // line up without padding.
+  function pairRows() {
+    var gap = new Array(PAIR_GAP + 1).join('.');
+    return GRID.map(function (row, y) { return COMPANION[y] + gap + row; });
+  }
+
+  function rowsFor(opts) { return opts && opts.pair ? pairRows() : GRID; }
 
   function palette(overrides) {
     if (!overrides) return DEFAULTS;
@@ -71,23 +112,26 @@
     return out;
   }
 
-  // opts: { colors, scale }. Scale only changes the coordinate numbers written into
-  // the markup; the SVG scales to whatever CSS gives it either way.
+  // opts: { colors, scale, pair }. Scale only changes the coordinate numbers written
+  // into the markup; the SVG scales to whatever CSS gives it either way. Width comes
+  // from the rows being drawn, not a module constant — the pair is wider than one.
   function svgMarkup(opts) {
     opts = opts || {};
     var px = opts.scale || 1;
     var colors = palette(opts.colors);
+    var rows = rowsFor(opts);
+    var w = rows[0].length, h = rows.length;
     var out = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' +
-              (W * px) + ' ' + (H * px) + '" shape-rendering="crispEdges">';
-    for (var y = 0; y < H; y++) {
-      var row = GRID[y];
+              (w * px) + ' ' + (h * px) + '" shape-rendering="crispEdges">';
+    for (var y = 0; y < h; y++) {
+      var row = rows[y];
       var x = 0;
-      while (x < W) {
+      while (x < w) {
         var ch = row.charAt(x);
         if (ch === '.') { x++; continue; }
         // merge horizontal runs of one colour into a single rect
         var run = 1;
-        while (x + run < W && row.charAt(x + run) === ch) run++;
+        while (x + run < w && row.charAt(x + run) === ch) run++;
         out += '<rect x="' + (x * px) + '" y="' + (y * px) +
                '" width="' + (run * px) + '" height="' + px +
                '" fill="' + colors[ch] + '"/>';

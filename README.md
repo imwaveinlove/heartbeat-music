@@ -159,13 +159,15 @@
 
 | 항목 | 설명 |
 |------|------|
-| `svgMarkup(opts)` | SVG 문자열. `opts`: `{ colors, scale }` |
+| `svgMarkup(opts)` | SVG 문자열. `opts`: `{ colors, scale, pair }` |
 | `dataUri(opts)` | `data:image/svg+xml,...` — `img.src` 나 CSS `url()` 에 |
 | `mount(host, opts)` | `host` 안에 SVG를 넣습니다. `favicon: false` 면 탭 아이콘은 건드리지 않습니다 |
 | `setFavicon(href)` | 파비콘만 따로 교체 |
 | `grid` | 문자 그리드 (읽을 때마다 새 복사본) |
 | `colors` | 기본 팔레트 |
 | `size` | `{ width, height }` — 픽셀이 아니라 칸 수 |
+
+`pair: true` 를 주면 두 캐릭터를 나란히 그립니다(어두운 쪽이 왼쪽, 62칸). 기본은 고양이 하나(36칸)입니다. 메뉴 로고는 둘 다 쓰고 파비콘은 하나만 쓰는데, 16px 에서 62칸짜리는 알아볼 수 없기 때문입니다.
 
 `colors` 는 넘긴 키만 덮어씁니다. 일부만 바꿔도 나머지는 기본값이 유지되고, 호출마다 독립적이라 한 번 바꿔도 다음 호출에 남지 않습니다.
 
