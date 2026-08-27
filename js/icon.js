@@ -17,21 +17,23 @@
 
   // 36 x 22. '.' is transparent.
   // Columns 0-5 and 30-35 are the wings; the cat head and heart face take the 24
-  // columns between them. Each wing sweeps from a point at its top outer corner
-  // down to where it meets the headphone, with one pink line inside splitting it
-  // into two feather groups — at this size that line is what stops it reading as a
-  // plain blob (or worse, another ear).
+  // columns between them.
+  //
+  // Every end of a wing is blunt. A tip that narrows to a single pixel reads as a
+  // horn, not a feather, so the top starts three pixels wide and the sweep runs
+  // diagonally down to the headphone. The one pink line inside splits it into two
+  // feather groups; widening that into a notch breaks the wing into two blobs.
   var GRID = [
     '......' + '.....PP..........PP.....' + '......',
     '......' + '....PWWP........PWWP....' + '......',
     '......' + '...PWWWWP......PWWWWP...' + '......',
-    'P.....' + '..PWWWWWWWP..PWWWWWWWP..' + '.....P',
-    'PP....' + '..PWWWWWWWWWWWWWWWWWWP..' + '....PP',
-    'PWP...' + '.PWWWWWWWWWWWWWWWWWWWWP.' + '...PWP',
-    'PWWP..' + '.PWWWWWWWWWWWWWWWWWWWWP.' + '..PWWP',
-    'PWWWP.' + '.PWWPPPPPPPPPPPPPPPPWWP.' + '.PWWWP',
-    'PWWWWP' + 'GPWPHHHHHHHHHHHHHHHHPWPG' + 'PWWWWP',
-    'PWPWWW' + 'GGPHHHHHHHHHHHHHHHHHHPGG' + 'WWWPWP',
+    '......' + '..PWWWWWWWP..PWWWWWWWP..' + '......',
+    '..PPP.' + '..PWWWWWWWWWWWWWWWWWWP..' + '.PPP..',
+    '.PWWWP' + '.PWWWWWWWWWWWWWWWWWWWWP.' + 'PWWWP.',
+    'PWWWWW' + '.PWWWWWWWWWWWWWWWWWWWWP.' + 'WWWWWP',
+    'PWWWWW' + '.PWWPPPPPPPPPPPPPPPPWWP.' + 'WWWWWP',
+    'PWWWWW' + 'GPWPHHHHHHHHHHHHHHHHPWPG' + 'WWWWWP',
+    '.PWPWW' + 'GGPHHHHHHHHHHHHHHHHHHPGG' + 'WWPWP.',
     '.PPWWW' + 'GDPHHHHHHHHHHHHHHHHHHPDG' + 'WWWPP.',
     '..PWWW' + 'GDPHHHPHHPHHHHPHHPHHHPDG' + 'WWWP..',
     '...PPP' + 'GDPHHHHPPHHHHHHPPHHHHPDG' + 'PPP...',
