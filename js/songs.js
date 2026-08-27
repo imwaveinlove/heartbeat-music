@@ -13,8 +13,10 @@
   // (80.8s reads as 1:20, not 1:21) so the two never disagree. Do not take these
   // from the mp3 header: the files are VBR and a bitrate guess reads far too long.
   var builtin = [
-    { id: 'koi-no-beat',   title: '恋のビート', note: '1:20', file: 'songs/koi-no-beat.mp3' },
-    { id: 'niji-wo-koete', title: '虹を越えて', note: '1:21', file: 'songs/niji-wo-koete.mp3' }
+    { id: 'koi-no-beat',         title: '恋のビート',     note: '1:20', file: 'songs/koi-no-beat.mp3' },
+    { id: 'niji-wo-koete',       title: '虹を越えて',     note: '1:21', file: 'songs/niji-wo-koete.mp3' },
+    { id: 'moshimo-negoto-nara', title: 'もしも寝言なら', note: '2:18', file: 'songs/moshimo-negoto-nara.mp3' },
+    { id: 'pocket-no-oku-de',    title: 'ポケットの奥で', note: '1:42', file: 'songs/pocket-no-oku-de.mp3' }
   ];
 
   function base64ToArrayBuffer(b64) {
