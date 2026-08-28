@@ -28,7 +28,6 @@
     RG.song.chart = null;
 
     paintSongSelection(RG.song.id);
-    el.fileName.textContent = '▶ ' + label;
     el.playBtn.classList.add('hidden');
     setStatus('채보 분석 중...');
     setBar(0);
@@ -44,7 +43,10 @@
           setStatus('노트를 찾지 못했습니다. 다른 음원을 시도해 주세요.');
           return;
         }
-        setStatus('노트 ' + notes.length + '개 · 길이 ' + fmtTime(buffer.duration));
+        // A built-in track already shows its name on the highlighted button; a file
+        // or a recording has no button, so name it here or nothing identifies it.
+        setStatus((RG.song.id ? '' : label + ' · ') +
+                  '노트 ' + notes.length + '개 · 길이 ' + fmtTime(buffer.duration));
         el.playBtn.classList.remove('hidden');
       })
       .catch(function (err) {

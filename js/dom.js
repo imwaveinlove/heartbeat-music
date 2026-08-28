@@ -22,7 +22,7 @@
     pickFileBtn: $('pickFileBtn'), fileInput: $('fileInput'),
     captureBtn: $('captureBtn'), capturePanel: $('capturePanel'),
     captureTime: $('captureTime'), captureStopBtn: $('captureStopBtn'),
-    fileName: $('fileName'), loadStatus: $('loadStatus'), bar: $('bar'), barFill: $('barFill'),
+    loadStatus: $('loadStatus'), bar: $('bar'), barFill: $('barFill'),
 
     // Settings
     diffSeg: $('diffSeg'), inputSeg: $('inputSeg'),
