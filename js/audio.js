@@ -64,44 +64,39 @@
   // that inharmonicity is what makes a jingle sound like metal instead of a chime.
   var JINGLE_RATIOS = [1, 1.42, 1.87, 2.34];
 
-  // A tambourine strike in two parts, done inside ~150ms: the shimmer of the
-  // jingles and a soft hand contact underneath.
-  function tap(kind, lane) {
-    var c = ctx();
-    if (c.state !== 'running') return;
-    var now = c.currentTime, out = hitBus();
-    var base = LANE_JINGLE_HZ[lane] || 3700;
-    var level = kind === 'perfect' ? 1 : kind === 'great' ? 0.85 : 0.68;
-
-    // 1. Jingle shimmer: bright noise, rung and left to decay. Slightly longer than
-    // a click because the discs keep rattling after the hit.
+  // One tambourine strike, in three parts. Both taps and hold completions go
+  // through here, so they are unmistakably the same instrument on the same lane —
+  // only the timing and tail length differ between them.
+  function strike(c, out, at, base, level, tail) {
+    // 1. Jingle shimmer: bright noise, rung and left to decay. Longer than a click
+    // because the discs keep rattling after the hit.
     var shimmer = noise();
     var bp = c.createBiquadFilter();
     bp.type = 'bandpass';
     bp.frequency.value = base * 1.6;
     bp.Q.value = 0.8;
     var shimmerEnv = c.createGain();
-    shimmerEnv.gain.setValueAtTime(0.0001, now);
-    shimmerEnv.gain.exponentialRampToValueAtTime(0.55 * level, now + 0.002);
-    shimmerEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.13);
+    shimmerEnv.gain.setValueAtTime(0.0001, at);
+    shimmerEnv.gain.exponentialRampToValueAtTime(0.55 * level, at + 0.002);
+    shimmerEnv.gain.exponentialRampToValueAtTime(0.0001, at + tail);
     shimmer.connect(bp).connect(shimmerEnv).connect(out);
-    shimmer.start(now);
-    shimmer.stop(now + 0.15);
+    shimmer.start(at);
+    shimmer.stop(at + tail + 0.02);
 
     // 2. The discs themselves: a few inharmonic partials, each fading at its own
     // rate so the shimmer breaks up instead of ringing as one tone.
     for (var i = 0; i < JINGLE_RATIOS.length; i++) {
       var osc = c.createOscillator();
       var env = c.createGain();
-      var decay = 0.05 + i * 0.022;
+      var decay = (0.05 + i * 0.022) * (tail / 0.13);
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(base * JINGLE_RATIOS[i], now);
-      env.gain.setValueAtTime(0.0001, now);
-      env.gain.exponentialRampToValueAtTime((0.14 - i * 0.025) * level, now + 0.002);
-      env.gain.exponentialRampToValueAtTime(0.0001, now + decay);
+      osc.frequency.setValueAtTime(base * JINGLE_RATIOS[i], at);
+      env.gain.setValueAtTime(0.0001, at);
+      env.gain.exponentialRampToValueAtTime((0.14 - i * 0.025) * level, at + 0.002);
+      env.gain.exponentialRampToValueAtTime(0.0001, at + decay);
       osc.connect(env).connect(out);
-      osc.start(now);
-      osc.stop(now + decay + 0.02);
+      osc.start(at);
+      osc.stop(at + decay + 0.02);
     }
 
     // 3. Hand contact: a soft low-mid thud so the hit has a body under the shimmer.
@@ -110,12 +105,22 @@
     lp.type = 'lowpass';
     lp.frequency.value = 900;
     var handEnv = c.createGain();
-    handEnv.gain.setValueAtTime(0.0001, now);
-    handEnv.gain.exponentialRampToValueAtTime(0.3 * level, now + 0.002);
-    handEnv.gain.exponentialRampToValueAtTime(0.0001, now + 0.045);
+    handEnv.gain.setValueAtTime(0.0001, at);
+    handEnv.gain.exponentialRampToValueAtTime(0.3 * level, at + 0.002);
+    handEnv.gain.exponentialRampToValueAtTime(0.0001, at + 0.045);
     hand.connect(lp).connect(handEnv).connect(out);
-    hand.start(now);
-    hand.stop(now + 0.06);
+    hand.start(at);
+    hand.stop(at + 0.06);
+  }
+
+  // A single strike, done inside ~150ms.
+  function tap(kind, lane) {
+    var c = ctx();
+    if (c.state !== 'running') return;
+    strike(c, hitBus(), c.currentTime,
+           LANE_JINGLE_HZ[lane] || 3700,
+           kind === 'perfect' ? 1 : kind === 'great' ? 0.85 : 0.68,
+           0.13);
   }
 
   function tapMiss() {
@@ -139,25 +144,18 @@
   // No sound runs while a hold is being kept: a sustained tone sat badly against
   // the music and fought the tambourine hits landing on top of it. The tail's own
   // shrinking bar is the feedback; only completing it makes a sound.
-  var HOLD_HZ = [392.00, 523.25, 659.25, 783.99];   // G4 C5 E5 G5
-  function holdHz(lane) { return HOLD_HZ[lane] || 523.25; }
 
-  // Bright confirmation when a hold is carried all the way to its tail.
+  // Carrying a hold to its end is answered with the same tambourine as a tap, on
+  // the same lane band — shaken rather than struck once. Two strikes a beat apart
+  // with a longer tail read as a finish without becoming a different instrument;
+  // a pitched sweep here sounded like a toy next to the tambourine taps.
   function holdComplete(lane) {
     var c = ctx();
     if (c.state !== 'running') return;
-    var now = c.currentTime;
-    var osc = c.createOscillator();
-    var env = c.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(holdHz(lane), now);
-    osc.frequency.exponentialRampToValueAtTime(holdHz(lane) * 2, now + 0.07);
-    env.gain.setValueAtTime(0.0001, now);
-    env.gain.exponentialRampToValueAtTime(0.4, now + 0.004);
-    env.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
-    osc.connect(env).connect(hitBus());
-    osc.start(now);
-    osc.stop(now + 0.2);
+    var now = c.currentTime, out = hitBus();
+    var base = LANE_JINGLE_HZ[lane] || 3700;
+    strike(c, out, now, base, 0.9, 0.1);
+    strike(c, out, now + 0.055, base, 1, 0.26);
   }
 
   RG.audio = {
