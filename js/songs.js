@@ -13,12 +13,17 @@
   // (80.8s reads as 1:20, not 1:21) so the two never disagree. Do not take these
   // from the mp3 header: the files are VBR and a bitrate guess reads far too long.
   var builtin = [
-    { id: 'koi-no-beat',         title: '恋のビート',     note: '1:20', file: 'songs/koi-no-beat.mp3' },
-    { id: 'niji-wo-koete',       title: '虹を越えて',     note: '1:21', file: 'songs/niji-wo-koete.mp3' },
-    { id: 'koi-no-melody',       title: '恋のメロディ',   note: '1:22', file: 'songs/koi-no-melody.mp3' },
-    { id: 'pocket-no-oku-de',    title: 'ポケットの奥で', note: '1:42', file: 'songs/pocket-no-oku-de.mp3' },
-    { id: 'futari-no-melody',    title: 'ふたりのメロディ', note: '1:27', file: 'songs/futari-no-melody.mp3' }
+    { id: 'koi-no-beat',      title: '恋のビート',       note: '1:20', file: 'koi-no-beat.mp3' },
+    { id: 'niji-wo-koete',    title: '虹を越えて',       note: '1:21', file: 'niji-wo-koete.mp3' },
+    { id: 'koi-no-melody',    title: '恋のメロディ',     note: '1:22', file: 'koi-no-melody.mp3' },
+    { id: 'pocket-no-oku-de', title: 'ポケットの奥で',   note: '1:42', file: 'pocket-no-oku-de.mp3' },
+    { id: 'futari-no-melody', title: 'ふたりのメロディ', note: '1:27', file: 'futari-no-melody.mp3' }
   ];
+
+  // Where songs/ sits relative to the page. v2/index.html is one level down and
+  // sets this to '../songs/' before loading this file, so both games share one
+  // track list — adding a song stays a single edit.
+  var BASE = RG.songsBase || 'songs/';
 
   function base64ToArrayBuffer(b64) {
     var bin = atob(b64);
@@ -33,7 +38,7 @@
       // Decoding ~2MB of base64 blocks briefly; let the caller paint a status first.
       return Promise.resolve(base64ToArrayBuffer(RG.embedded[track.id]));
     }
-    return fetch(track.file).then(function (res) {
+    return fetch(BASE + track.file).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.arrayBuffer();
     }).catch(function (err) {

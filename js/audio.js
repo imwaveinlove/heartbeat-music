@@ -160,6 +160,11 @@
 
   RG.audio = {
     ctx: ctx, tap: tap, tapMiss: tapMiss,
-    holdComplete: holdComplete
+    holdComplete: holdComplete,
+    // Exposed for v2/js/audio.js, which adds the slash and bomb sounds. They have
+    // to share this bus and this noise buffer, or the new sounds bypass the
+    // compressor and stack gain against the song exactly as described above.
+    hitBus: hitBus, noise: noise, strike: strike,
+    LANE_JINGLE_HZ: LANE_JINGLE_HZ
   };
 })();
