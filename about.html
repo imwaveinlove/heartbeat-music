@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>소개 · heartbeat♡</title>
+<meta name="description" content="heartbeat♡는 브라우저에서 음원을 분석해 리듬게임 채보를 자동으로 만들어 주는 4키 리듬게임입니다. 수록곡은 모두 제작자의 자작곡입니다.">
+<meta name="google-adsense-account" content="ca-pub-1647306421696648">
+<link rel="icon" href="icon-32.png">
+<link rel="stylesheet" href="css/page.css">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1647306421696648"
+crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <a class="brand" href="index.html">
+      <img src="panda-heart.png" alt=""> heartbeat♡
+    </a>
+    <nav class="nav">
+      <a href="index.html">게임</a>
+      <a href="guide.html">게임 방법</a>
+      <a href="about.html" aria-current="page">소개</a>
+      <a href="privacy.html">개인정보처리방침</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>heartbeat♡ 소개</h1>
+    <p class="lede">내가 만든 노래를 그대로 리듬게임으로 바꿔 주는, 설치 없는 4키 리듬게임입니다.</p>
+
+    <h2>어떤 사이트인가요</h2>
+    <p>
+      리듬게임을 하려면 보통 누군가 손으로 채보를 찍어야 합니다. 노트 하나하나를 박자에 맞춰
+      배치하는 작업이라, 곡 하나에 몇 시간씩 걸리고 그래서 대부분의 리듬게임은 정해진 수록곡만
+      플레이할 수 있습니다.
+    </p>
+    <p>
+      heartbeat♡는 그 과정을 브라우저가 대신합니다. 음원을 넣으면 소리를 분석해 타격 지점을
+      찾아내고, 난이도에 맞춰 노트를 배치합니다. <strong>내 컴퓨터 안에서 전부 처리되기 때문에</strong>
+      서버에 올릴 필요도, 회원가입도, 설치도 없습니다.
+    </p>
+
+    <h2>수록곡</h2>
+    <p>
+      수록된 다섯 곡은 모두 <strong>제작자가 직접 만든 자작곡</strong>입니다. 남의 음원을 올려 둔 것이
+      아니라, 만든 곡을 게임으로 즐기려다 사이트까지 만들게 된 쪽에 가깝습니다.
+    </p>
+    <table>
+      <thead><tr><th>곡</th><th>길이</th></tr></thead>
+      <tbody>
+        <tr><td>恋のビート</td><td>1:20</td></tr>
+        <tr><td>虹を越えて</td><td>1:21</td></tr>
+        <tr><td>恋のメロディ</td><td>1:22</td></tr>
+        <tr><td>ポケットの奥で</td><td>1:42</td></tr>
+        <tr><td>ふたりのメロディ</td><td>1:27</td></tr>
+      </tbody>
+    </table>
+    <p>
+      수록곡 외에 <strong>직접 가진 음원 파일을 불러와서</strong> 플레이할 수도 있습니다. 이 경우에도
+      파일은 브라우저 안에서만 열리고 어디로도 전송되지 않습니다.
+    </p>
+
+    <h2>어떻게 만들어졌나요</h2>
+    <p>
+      빌드 도구나 프레임워크 없이 순수 HTML·CSS·JavaScript로만 만들었습니다. 소리 분석과 재생은
+      브라우저에 내장된 <strong>Web Audio API</strong>가, 노트가 흘러내리는 화면은
+      <strong>Canvas</strong>가 담당합니다.
+    </p>
+    <p>
+      마스코트도 외부 이미지가 아니라 코드 안의 문자 그리드에서 그려집니다. 픽셀 하나가 문자 하나에
+      대응해서, 색을 바꾸거나 크기를 키워도 흐려지지 않습니다.
+    </p>
+    <div class="card">
+      <p>
+        판정 타이밍은 화면 갱신이 아니라 <strong>오디오 시계</strong>를 기준으로 계산합니다. 프레임이
+        밀리는 순간에도 음악과 노트가 어긋나지 않게 하기 위해서입니다. 자세한 내용은
+        <a href="guide.html">게임 방법</a>에 정리해 두었습니다.
+      </p>
+    </div>
+
+    <h2>만든 사람</h2>
+    <p>
+      곡과 사이트 모두 <strong>imwaveinlove</strong>가 만들었습니다. 취미로 만든 곡을 직접 플레이해
+      보고 싶어서 시작한 개인 프로젝트입니다.
+    </p>
+
+    <h2>문의</h2>
+    <p>
+      버그 제보나 의견은 <a href="https://github.com/imwaveinlove/heartbeat-music/issues"
+      target="_blank" rel="noopener">GitHub 저장소의 이슈</a>로 남겨 주세요. 소스 코드도 같은 곳에
+      공개되어 있습니다.
+    </p>
+
+    <p><a class="cta" href="index.html">게임 하러 가기</a></p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="links">
+      <a href="index.html">게임</a>
+      <a href="guide.html">게임 방법</a>
+      <a href="about.html">소개</a>
+      <a href="privacy.html">개인정보처리방침</a>
+      <a href="https://github.com/imwaveinlove/heartbeat-music" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <div>© imwaveinlove · 수록곡은 모두 자작곡입니다.</div>
+  </footer>
+
+</div>
+</body>
+</html>
