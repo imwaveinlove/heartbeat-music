@@ -1,0 +1,63 @@
+/* v2.css — what v2 adds on top of ../css/style.css.
+ *
+ * The look is unchanged on purpose: same cotton-candy ground, same candy
+ * controls. Only the playfield became a corridor, and that is drawn on canvas.
+ */
+
+/* The stage is now depth rather than a flat field, so the ground fades from a
+   bright far end down to the deeper near end — the canvas paints the light at
+   the vanishing point on top of this. */
+#stageWrap {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 13%, rgba(255,255,255,.9), transparent 70%),
+    radial-gradient(circle, rgba(255,255,255,.45) 1.4px, transparent 1.5px),
+    linear-gradient(180deg, #fff0f8 0%, var(--field) 46%, var(--field2) 100%);
+  background-size: auto, 12px 12px, auto;
+}
+
+/* touch-action is not inherited, and without it a drag across the canvas scrolls
+   the page (or triggers pull-to-refresh) instead of reaching pointermove. */
+#cv { touch-action: none; }
+
+h1 .v2 {
+  display: inline-block; margin-left: 8px; vertical-align: middle;
+  font-size: .42em; font-weight: 800; letter-spacing: .06em;
+  color: #fff; background: linear-gradient(180deg, #b57bee, #8d4fd6);
+  border-radius: 999px; padding: 4px 10px;
+  text-shadow: none; box-shadow: 0 3px 0 rgba(141,79,214,.45);
+}
+
+/* The four note kinds, as chips. A legend is cheaper than a tutorial and this
+   game has one mechanic more than the shapes can explain by themselves. */
+.legend {
+  display: flex; flex-wrap: wrap; gap: 7px; justify-content: center;
+  font-size: 11px; font-weight: 700; color: var(--dim);
+}
+.legend .lg {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,.8); border-radius: 999px;
+  padding: 5px 12px 5px 6px; box-shadow: 0 2px 0 var(--line);
+}
+.legend b {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 21px; height: 21px; border-radius: 7px;
+  color: #fff; font-size: 13px; line-height: 1;
+}
+.legend .tap b   { background: var(--l0); border-radius: 999px; }
+.legend .slash b { background: var(--l1); }
+.legend .hold b  { background: var(--l2); border-radius: 999px; box-shadow: 0 0 0 2px rgba(47,201,184,.35); }
+.legend .bomb b  { background: #3b1230; border-radius: 999px; }
+
+@media (max-height: 560px) {
+  h1 .v2 { padding: 3px 8px; }
+  .legend { font-size: 10px; gap: 5px; }
+  .legend .lg { padding: 4px 9px 4px 5px; }
+  .legend b { width: 18px; height: 18px; font-size: 11px; }
+}
+
+/* The landscape two-column menu hides the description; the legend is the one
+   thing a new player still needs, so it spans both columns instead. */
+@media (max-height: 440px) and (orientation: landscape) {
+  #menuOverlay .legend { grid-column: 1 / -1; }
+  #menuOverlay .ver-link { grid-column: 1 / -1; }
+}
