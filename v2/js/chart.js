@@ -128,7 +128,7 @@
 
     for (var i = 0; i < order.length && placed < budget; i++) {
       var n = order[i];
-      if (n.removed || n.type !== C.TAP) continue;
+      if (n.removed || n.type !== C.SLASH) continue;
       // Sorted by sustain, so once the longest remaining note is too short to
       // hold, so is everything after it.
       if (Math.min(n.sustain, cfg.holdMax) < C.HOLD.MIN) break;
@@ -147,7 +147,7 @@
       // removes notes when it genuinely cannot fit around them.
       var drop = -1, tail = 0;
       for (var k = 0; k <= MAX_REMOVE && k <= after.length; k++) {
-        if (k > 0 && after[k - 1].type !== C.TAP) break;   // never eat another hold
+        if (k > 0 && after[k - 1].type !== C.SLASH) break;   // never eat another hold
         var next = after[k];
         var gap = next ? (next.col === n.col ? cfg.cellGap : cfg.globalGap) : 0;
         var room = next ? next.time - gap - n.time : cfg.holdMax;
@@ -166,55 +166,47 @@
     return notes.filter(function (n) { return !n.removed; });
   }
 
-  // ---------- slashes ----------
-  // A flick needs room on both sides: the finger has to arrive, travel through,
-  // and leave. Onsets packed against a neighbour stay taps however strong they are.
-  function assignSlashes(notes, cfg) {
-    if (!cfg.slashShare) return;
+  // ---------- directions ----------
+  // Every playable note is a slash, so the only question left is which way. It is
+  // not a random one.
+  //
+  // On EASY the arrows just alternate down and up within a hand, so the finger
+  // saws instead of being asked to flick the same way twice from a position it
+  // never returned to.
+  //
+  // From NORMAL the horizontal arrows carry the choreography: if the next note
+  // this hand plays is in the cell to the right, this note's arrow IS right, so
+  // flicking it leaves the finger already travelling toward where it has to be.
+  // That turns the arrow from a second thing to read into an instruction the
+  // player was going to need anyway, which is why four directions came out
+  // easier than two rather than harder.
+  function flowDirections(notes, dirSet, perHand) {
+    // With one pointer there are no hands to speak of — the cursor follows a
+    // single path, so the guidance is computed over the whole sequence.
+    function handOf(n) { return perHand ? (n.col < 2 ? 0 : 1) : 0; }
 
-    var eligible = [];
-    for (var i = 0; i < notes.length; i++) {
-      var n = notes[i];
-      if (n.type !== C.TAP) continue;                       // holds keep their tails
-      var before = i > 0 ? n.time - notes[i - 1].time : 9;
-      var after = i < notes.length - 1 ? notes[i + 1].time - n.time : 9;
-      if (Math.min(before, after) < 0.155) continue;
-      eligible.push(n);
-    }
+    var goingDown = [true, true];
 
-    eligible.sort(function (a, b) { return b.strength - a.strength; });
-    eligible.slice(0, Math.floor(notes.length * cfg.slashShare))
-            .forEach(function (n) { n.type = C.SLASH; });
-
-    flowDirections(notes, cfg.dirSet);
-  }
-
-  // Directions are not random. Each hand owns two columns, and within a hand the
-  // slashes alternate down and up so the finger saws, instead of being asked to
-  // flick the same way twice from a position it never returned to. On HARD every
-  // third slash leans outward into a diagonal, which keeps the saw from reading
-  // as a metronome without ever reversing the flow.
-  function flowDirections(notes, dirSet) {
-    var goingDown = [true, true];     // per hand: is the next slash a downward one
-    var count = [0, 0];
     for (var i = 0; i < notes.length; i++) {
       var n = notes[i];
       if (n.type !== C.SLASH) continue;
-      var hand = n.col < 2 ? 0 : 1;
-      var base = goingDown[hand] ? C.DIR_DOWN : C.DIR_UP;
-      var dir = base;
+      var hand = handOf(n);
 
-      if (dirSet === 'all' && count[hand] % 3 === 1) {
-        // "Left of up" is one step counter-clockwise but "left of down" is one
-        // step clockwise, so the sign flips with the base direction.
-        var toLeft = base === C.DIR_UP ? -1 : 1;
-        var lean = n.col < 2 ? toLeft : -toLeft;      // always outward, away from centre
-        dir = (base + lean + 8) % 8;
+      // The next note this hand will actually play. Holds count — the finger has
+      // to travel to them too. Bombs are inserted later and are never a target.
+      var next = null;
+      for (var j = i + 1; j < notes.length; j++) {
+        if (handOf(notes[j]) === hand) { next = notes[j]; break; }
       }
 
-      n.dir = dir;
-      goingDown[hand] = !goingDown[hand];
-      count[hand]++;
+      if (dirSet === 'cardinal4' && next && next.col !== n.col) {
+        n.dir = next.col > n.col ? C.DIR_RIGHT : C.DIR_LEFT;
+        // A sideways flick does not use up the vertical alternation, so the saw
+        // picks up where it left off the next time the hand stays in one cell.
+      } else {
+        n.dir = goingDown[hand] ? C.DIR_DOWN : C.DIR_UP;
+        goingDown[hand] = !goingDown[hand];
+      }
     }
   }
 
@@ -319,14 +311,14 @@
         insertSorted(colTimes[nt.col], nt.time);
         insertSorted(globalTimes, nt.time);
         chosen.push({
-          time: nt.time, col: nt.col, row: 0, type: C.TAP, dir: C.DIR_DOWN,
+          time: nt.time, col: nt.col, row: 0, type: C.SLASH, dir: C.DIR_DOWN,
           strength: nt.strength, sustain: nt.sustain || 0, hold: 0, holdEnd: 0
         });
       }
       chosen.sort(function (a, b) { return a.time - b.time; });
 
       chosen = assignHolds(chosen, cfg, soloHold);
-      assignSlashes(chosen, cfg);
+      flowDirections(chosen, cfg.dirSet, RG.settings.input === 'touch');
       chosen = insertBombs(chosen, cfg);
       chosen.forEach(function (n) { delete n.strength; delete n.sustain; });
       return chosen;

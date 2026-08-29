@@ -22,9 +22,14 @@ RG.config = {
   // pink · lavender · mint · sky — the v1 lane palette, one colour per band
   COL_COLORS: ['#ff2e88', '#b57bee', '#2fc9b8', '#5f9cff'],
 
-  // Note kinds. TAP and HOLD are v1's notes moved onto a grid; SLASH is the new
-  // one and is what makes this a v2 rather than a reskin.
-  TAP: 0, SLASH: 1, HOLD: 2, BOMB: 3,
+  // Note kinds. There is no tap: every note that is played is a slash, and the
+  // other two are the exceptions to it.
+  //
+  // Dropping the tap is what made the game readable. With both kinds on screen a
+  // player has to classify each arriving note before choosing what to do with it,
+  // and a misread is a miss — while the arrow, which says what to do, is a
+  // clearer glyph at distance than "heart or cube" ever was.
+  SLASH: 0, HOLD: 1, BOMB: 2,
 
   // Screen-space unit vectors, plus the rotation that aims an up-pointing arrow
   // along them. ang = atan2(dx, -dy): up is 0, and canvas rotation is clockwise
@@ -47,13 +52,21 @@ RG.config = {
   WINDOWS: { perfect: 0.058, great: 0.110, good: 0.165, miss: 0.215 },
   SCORES:  { perfect: 300, great: 200, good: 100 },
 
-  // A drag only counts as a slash once the finger has actually covered ground.
-  // Measured over a short trailing window, not since pointerdown: a finger that
-  // wanders slowly across the glass must not read as a flick.
+  // A drag counts as a slash once the finger has covered ground in one direction.
+  //
+  // Measured from an anchor that only moves when the finger turns, NOT inside a
+  // fixed time window. A trailing window looks like the right way to reject a
+  // finger drifting across the glass, but it also rejects a deliberate slow
+  // flick: at 55ms per sample the travel inside the window never reaches the
+  // threshold and the note simply cannot be hit, however well it is aimed.
+  // Turning is what separates a flick from wandering, not speed.
+  // minDist is deliberately small. It only has to be enough to know which way the
+  // finger is going — waiting for a long travel means judging the flick late, and
+  // the direction is already unambiguous well before then.
   SWIPE: {
-    window: 0.13,     // seconds of pointer history a slash vector is measured over
-    minDist: 0.30,    // fraction of a cell the finger must cover inside that window
-    angleTol: 58      // degrees off the arrow that still counts
+    minDist: 0.16,    // fraction of a cell the finger must cover, at any speed
+    angleTol: 70,     // degrees off the arrow that still counts
+    maxAge: 0.28      // how far back a flick may be traced, in seconds
   },
 
   // How close a touch must land, as a fraction of a cell, to claim a note.
@@ -74,36 +87,41 @@ RG.config = {
   ANALYSIS_RATE: 22050,
   HOP: 256,
   LEAD_IN: 2.4,          // a touch longer than v1: the runway is also the tutorial
-  BASE_APPROACH: 1.6,    // seconds for a note to fly the corridor at 1.0x
+  BASE_APPROACH: 1.85,   // seconds for a note to fly the corridor at 1.0x
 
   // Two pointers or one. On a phone the left thumb owns columns 0-1 and the right
   // owns 2-3, so a note is only reachable if that thumb is not still busy next
   // door. A mouse is a single pointer that has to reach the whole grid, so it gets
   // fewer notes and a wider global gap instead.
+  // Both numbers went up when the taps went away: every note is now a gesture,
+  // and a thumb that has to flick cannot be asked to do it as often as a thumb
+  // that only had to land.
   INPUT: {
-    touch: { npsScale: 1.0,  handGap: 0.15, gapFloor: 0 },
-    mouse: { npsScale: 0.62, handGap: 0,    gapFloor: 0.19 }
+    touch: { npsScale: 1.0, handGap: 0.24, gapFloor: 0 },
+    mouse: { npsScale: 0.7, handGap: 0,    gapFloor: 0.28 }
   },
 
   // The ladder adds a note kind at a time, so each level is a thing to learn
   // rather than the same chart played faster:
-  //   EASY   tap + slash                      — touch, and flick
-  //   NORMAL + hold                           — and stay
-  //   HARD   + bomb, diagonal slashes, overlapping holds
+  //   EASY   slash, up and down only
+  //   NORMAL + left and right, + hold
+  //   HARD   + bomb, tighter, overlapping holds
   //
-  // EASY gets slashes from the start on purpose. Held back to NORMAL they arrive
-  // together with holds and with twice the density, which is three new things at
-  // once; and a tap-only EASY is v1 with a worse input method.
+  // EASY keeps two directions because the glyph is the thing being learned there.
+  // From NORMAL the horizontal arrows earn their place by pointing at the next
+  // note (see flowDirections) — they stop being extra information to decode and
+  // become the choreography.
+  //
+  // nps is lower across the board than it was when taps existed. Every note now
+  // costs a gesture, so notes-per-second and flicks-per-second are the same
+  // number, and the old 4.4 was asking for a flick every 227ms.
   DIFFS: {
-    easy:   { nps: 1.6, cellGap: 0.36, globalGap: 0.22,
-              slashShare: 0.22, dirSet: 'cardinal', holdShare: 0,
-              holdMax: 0,   soloHold: true,  bombShare: 0 },
-    normal: { nps: 2.8, cellGap: 0.24, globalGap: 0.13,
-              slashShare: 0.38, dirSet: 'cardinal', holdShare: 0.10,
-              holdMax: 1.6, soloHold: true,  bombShare: 0 },
-    hard:   { nps: 4.4, cellGap: 0.15, globalGap: 0.08,
-              slashShare: 0.55, dirSet: 'all',      holdShare: 0.16,
-              holdMax: 2.6, soloHold: false, bombShare: 0.05 }
+    easy:   { nps: 1.2, cellGap: 0.50, globalGap: 0.38, dirSet: 'ud',
+              holdShare: 0,    holdMax: 0,   soloHold: true,  bombShare: 0 },
+    normal: { nps: 2.0, cellGap: 0.34, globalGap: 0.24, dirSet: 'cardinal4',
+              holdShare: 0.10, holdMax: 1.6, soloHold: true,  bombShare: 0 },
+    hard:   { nps: 3.0, cellGap: 0.22, globalGap: 0.15, dirSet: 'cardinal4',
+              holdShare: 0.14, holdMax: 2.6, soloHold: false, bombShare: 0.04 }
   },
 
   // One filter per column: kick / low-mid / high-mid / hats+cymbals.

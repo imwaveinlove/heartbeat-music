@@ -229,18 +229,36 @@
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
-  // The slash vector: how far the finger travelled inside the last SWIPE.window
-  // seconds. Measured over a trailing window rather than since pointerdown, so a
-  // finger that drifts slowly across the glass never reads as a flick.
+  // The slash: walk the trail backwards from where the finger is now and take the
+  // MOST RECENT sample it has travelled far enough from. That sample is where
+  // this flick began — its position gives the direction, its timestamp gives the
+  // moment to judge.
+  //
+  // Both of those were wrong before, and measurably so:
+  //
+  //  - Distance measured inside a fixed 130ms window meant a deliberate flick at
+  //    55ms per sample never accumulated the threshold and could not be hit at
+  //    all, however well it was aimed. Speed is not what separates a flick from a
+  //    finger wandering across the glass.
+  //  - Judging at the moment the threshold tripped read late by however long the
+  //    finger took — 51ms for a fast flick, 219ms for a slow one, which turned a
+  //    perfectly timed slow flick into a MISS.
+  //
+  // Net displacement handles the wandering case on its own: a finger that goes
+  // back and forth never gets far from any recent sample. And because the search
+  // is backwards, a finger that rested in the cell before flicking anchors to the
+  // start of the flick, not to where it had been waiting.
   function slashVector(p, now) {
     var trail = p.trail;
-    while (trail.length > 1 && now - trail[0].t > C.SWIPE.window * 1000) trail.shift();
-    if (trail.length < 2) return null;
-    var a = trail[0], b = trail[trail.length - 1];
-    var dx = b.x - a.x, dy = b.y - a.y;
-    var len = Math.hypot(dx, dy);
-    if (len < C.SWIPE.minDist * RG.render.cellUnit()) return null;
-    return { dx: dx / len, dy: dy / len, len: len };
+    var need = C.SWIPE.minDist * RG.render.cellUnit();
+    for (var i = trail.length - 1; i >= 0; i--) {
+      var s = trail[i];
+      if (now - s.t > C.SWIPE.maxAge * 1000) break;
+      var dx = p.x - s.x, dy = p.y - s.y;
+      var len = Math.hypot(dx, dy);
+      if (len >= need) return { dx: dx / len, dy: dy / len, len: len, at: s.t };
+    }
+    return null;
   }
 
   function directionMatches(vec, dir) {
@@ -264,13 +282,13 @@
     if (bomb) { hitBomb(bomb); return; }
 
     // A slash is not resolved on touchdown — it needs the travel that follows.
-    var note = findNote(t, function (n) {
-      return n.type === C.TAP || n.type === C.HOLD;
-    }, pt.x, pt.y, pt.x, pt.y);
+    // A hold is: it is the one note the player answers by staying put.
+    var note = findNote(t, function (n) { return n.type === C.HOLD; },
+                        pt.x, pt.y, pt.x, pt.y);
     if (!note) return;
 
     judgeNote(note, t);
-    if (note.type === C.HOLD) startHold(note, p);
+    startHold(note, p);
   }
 
   function onMove(e) {
@@ -284,6 +302,7 @@
     var x0 = p.x, y0 = p.y;
     p.x = pt.x; p.y = pt.y;
     p.trail.push({ x: pt.x, y: pt.y, t: now });
+    while (p.trail.length > 1 && now - p.trail[0].t > 1200) p.trail.shift();
 
     var t = songTime();
 
@@ -294,30 +313,33 @@
     // game this borrows from — that is the whole appeal of a directional note.
     var vec = slashVector(p, now);
     if (vec) {
+      // The whole gesture is credited to the moment it began, for finding the
+      // note as well as for scoring it. Searching at wall-clock time and then
+      // scoring at the corrected one would let a flick score PERFECT only if it
+      // was still inside the window when it finished — which is the bug.
+      var st = t - (now - vec.at) / 1000;
       for (var guard = 0; guard < 4; guard++) {
-        var slash = findNote(t, function (n) {
+        var slash = findNote(st, function (n) {
           return n.type === C.SLASH && directionMatches(vec, n.dir);
         }, x0, y0, pt.x, pt.y);
         if (!slash) break;
-        judgeNote(slash, t);
+        judgeNote(slash, st);
       }
       fx.slashes.push({ x0: x0, y0: y0, x1: pt.x, y1: pt.y,
                         at: now, color: 'rgba(255,255,255,0.9)' });
     }
 
-    // Moving INTO a cell plays a tap waiting there; sitting in one does not. That
-    // is what lets a single drag connect a run of taps without letting a parked
-    // finger collect them for free.
+    // Sliding into a cell where a hold is due starts it, so a hold that follows a
+    // flick does not need the finger lifted and put back down.
     var cell = cellAt(pt.x, pt.y);
     if (cell >= 0 && cell !== p.cell) {
       flashCell(cellCol(cell), cellRow(cell));
-      var tap = findNote(t, function (n) {
-        return (n.type === C.TAP || n.type === C.HOLD) &&
-               n.col === cellCol(cell) && n.row === cellRow(cell);
-      }, x0, y0, pt.x, pt.y);
-      if (tap) {
-        judgeNote(tap, t);
-        if (tap.type === C.HOLD) startHold(tap, p);
+      if (p.holdCol < 0) {
+        var held = findNote(t, function (n) {
+          return n.type === C.HOLD &&
+                 n.col === cellCol(cell) && n.row === cellRow(cell);
+        }, x0, y0, pt.x, pt.y);
+        if (held) { judgeNote(held, t); startHold(held, p); }
       }
     }
     p.cell = cell;
@@ -358,8 +380,12 @@
     var t = songTime();
     var notes = current.notes;
 
+    // Retired a gesture's length after the miss window, not at it. A flick that
+    // began on the beat can take a couple of hundred milliseconds to declare
+    // itself, and sweeping the note away at the window means the note is already
+    // scored MISS by the time the flick it earned arrives.
     while (current.missPointer < notes.length &&
-           notes[current.missPointer].time < t - C.WINDOWS.miss) {
+           notes[current.missPointer].time < t - C.WINDOWS.miss - C.SWIPE.maxAge) {
       var n = notes[current.missPointer];
       if (!n.judged) {
         // A bomb that flew past untouched is the good outcome, not a miss.
@@ -485,7 +511,7 @@
 
     // localStorage throws on some file:// origins — never let that kill the
     // result screen. The key is v2's own, so v1 scores are not overwritten.
-    var key = 'heartbeat.v2.best.' + RG.song.label + '.' + RG.settings.diff;
+    var key = 'heartbeat.v2d.best.' + RG.song.label + '.' + RG.settings.diff;
     var best = 0;
     try { best = parseInt(localStorage.getItem(key) || '0', 10) || 0; } catch (err) {}
     if (current.score > best) {

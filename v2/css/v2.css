@@ -43,8 +43,7 @@ h1 .v2 {
   width: 21px; height: 21px; border-radius: 7px;
   color: #fff; font-size: 13px; line-height: 1;
 }
-.legend .tap b   { background: var(--l0); border-radius: 999px; }
-.legend .slash b { background: var(--l1); }
+.legend .slash b { background: var(--l0); }
 .legend .hold b  { background: var(--l2); border-radius: 999px; box-shadow: 0 0 0 2px rgba(47,201,184,.35); }
 .legend .bomb b  { background: #3b1230; border-radius: 999px; }
 

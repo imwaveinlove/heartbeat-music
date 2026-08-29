@@ -32,9 +32,8 @@
       else if (n.type === C.HOLD) hold++;
       else if (n.type === C.BOMB) bomb++;
     });
-    var parts = ['노트 ' + (notes.length - bomb) + '개'];
-    if (slash) parts.push('드래그 ' + slash);
-    if (hold) parts.push('홀드 ' + hold);
+    var parts = ['드래그 ' + slash + '개'];
+    if (hold) parts.push('누르고 유지 ' + hold);
     if (bomb) parts.push('폭탄 ' + bomb);
     return parts.join(' · ');
   }

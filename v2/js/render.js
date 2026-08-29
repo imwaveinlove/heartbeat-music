@@ -301,26 +301,9 @@
       return;
     }
 
-    if (note.type === C.SLASH) {
-      // A cube with an arrow, borrowed wholesale from the game this one is a nod
-      // to. The shape difference is what tells a flick from a touch at distance —
-      // the arrow inside is only readable in the last half second.
-      ctx.shadowColor = color;
-      ctx.shadowBlur = Math.min(18, r * 0.7);
-      ctx.fillStyle = color;
-      roundRect(p.x - r, p.y - r, r * 2, r * 2, r * 0.3);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
-      ctx.lineWidth = Math.max(1.2, r * 0.13);
-      ctx.stroke();
-      fillArrow(p.x, p.y, r, note.dir, 'rgba(255,255,255,0.96)');
-      ctx.globalAlpha = 1;
-      return;
-    }
-
-    // TAP and HOLD share a head. A hold is told apart by its ribbon, and by the
-    // ring around it that says "stay here".
+    // Every playable note is a heart. With no second shape to be told apart from,
+    // the arrow on its face is the only thing the eye has to resolve — which is
+    // the whole point of dropping the tap.
     ctx.shadowColor = color;
     ctx.shadowBlur = Math.min(18, r * 0.7);
     ctx.fillStyle = color;
@@ -331,6 +314,16 @@
     ctx.lineWidth = Math.max(1.2, r * 0.13);
     ctx.stroke();
 
+    if (note.type === C.SLASH) {
+      // Sat a little high: a heart carries its mass above its point, so an arrow
+      // on the geometric centre reads as sliding off the bottom of it.
+      fillArrow(p.x, p.y - r * 0.12, r * 0.74, note.dir, 'rgba(255,255,255,0.97)');
+      ctx.globalAlpha = 1;
+      return;
+    }
+
+    // A hold wears a ring where a slash wears an arrow: it is the one note
+    // answered by staying still, so the absence of an arrow is the instruction.
     if (note.type === C.HOLD) {
       ctx.strokeStyle = 'rgba(255,255,255,0.85)';
       ctx.lineWidth = Math.max(1, r * 0.1);
