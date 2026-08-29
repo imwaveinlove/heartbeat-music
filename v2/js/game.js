@@ -126,19 +126,21 @@
 
   // Which cell a screen point is in, or -1. Used to tell "the finger moved into
   // a new cell" from "the finger is parked" — parking must never farm notes.
+  // Packed as one integer so "did the cell change" is a plain comparison.
   function cellAt(x, y) {
     var k = RG.render.cellSize();
-    var rows = C.DIFFS[RG.settings.diff].rows;
     for (var col = 0; col < C.COLS; col++) {
-      for (var row = 0; row < rows; row++) {
+      for (var row = 0; row < C.ROWS; row++) {
         var c = RG.render.cellCenter(col, row);
         if (Math.abs(x - c.x) <= k.w / 2 && Math.abs(y - c.y) <= k.h / 2) {
-          return col * 2 + row;
+          return col * C.ROWS + row;
         }
       }
     }
     return -1;
   }
+  function cellCol(i) { return Math.floor(i / C.ROWS); }
+  function cellRow(i) { return i % C.ROWS; }
 
   // The best live note reachable from a point (or from the segment just covered).
   // Closest in time wins; distance only breaks ties, so a touch between two cells
@@ -255,7 +257,7 @@
     var p = { x: pt.x, y: pt.y, trail: [{ x: pt.x, y: pt.y, t: now }],
               cell: cellAt(pt.x, pt.y), holdCol: -1, holdRow: -1 };
     pointers[e.pointerId] = p;
-    if (p.cell >= 0) flashCell(p.cell >> 1, p.cell & 1);
+    if (p.cell >= 0) flashCell(cellCol(p.cell), cellRow(p.cell));
 
     var t = songTime();
     var bomb = bombAt(t, pt.x, pt.y, pt.x, pt.y);
@@ -308,10 +310,10 @@
     // finger collect them for free.
     var cell = cellAt(pt.x, pt.y);
     if (cell >= 0 && cell !== p.cell) {
-      flashCell(cell >> 1, cell & 1);
+      flashCell(cellCol(cell), cellRow(cell));
       var tap = findNote(t, function (n) {
         return (n.type === C.TAP || n.type === C.HOLD) &&
-               n.col === (cell >> 1) && n.row === (cell & 1);
+               n.col === cellCol(cell) && n.row === cellRow(cell);
       }, x0, y0, pt.x, pt.y);
       if (tap) {
         judgeNote(tap, t);
@@ -410,7 +412,10 @@
     RG.game.current = current;
 
     fx.hits = []; fx.slashes = []; fx.judge = null; fx.shake = 0;
-    fx.cellFlash = [[0, 0], [0, 0], [0, 0], [0, 0]];
+    fx.cellFlash = [];
+    for (var cf = 0; cf < C.COLS; cf++) {
+      fx.cellFlash.push(new Array(C.ROWS).fill(0));
+    }
     pointers = {};
 
     el.menuOverlay.classList.add('hidden');

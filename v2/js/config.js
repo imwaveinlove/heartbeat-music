@@ -11,10 +11,14 @@ window.RG = window.RG || {};
 RG.V2 = true;
 
 RG.config = {
-  // The grid the notes arrive on. Columns are frequency bands, exactly as in v1;
-  // rows are new and are what makes a finger travel instead of just tapping.
+  // The grid the notes arrive on. Columns are frequency bands, exactly as in v1.
+  //
+  // One row, always. A second row made the game about reaching rather than about
+  // rhythm: four targets is what two thumbs cover without the hands leaving the
+  // glass, and every note kind stays reachable from where the thumb already is.
+  // The difficulty ladder is note kinds instead — see DIFFS.
   COLS: 4,
-  ROWS: 2,                       // per-difficulty; EASY uses the bottom row only
+  ROWS: 1,
   // pink · lavender · mint · sky — the v1 lane palette, one colour per band
   COL_COLORS: ['#ff2e88', '#b57bee', '#2fc9b8', '#5f9cff'],
 
@@ -81,18 +85,23 @@ RG.config = {
     mouse: { npsScale: 0.62, handGap: 0,    gapFloor: 0.19 }
   },
 
-  // The difficulty ladder is a progression of mechanics, not just of note count:
-  //   EASY   one row, taps only            — learn to touch what is arriving
-  //   NORMAL two rows, cardinal slashes    — learn to travel and to flick
-  //   HARD   diagonals, bombs, overlapping holds
+  // The ladder adds a note kind at a time, so each level is a thing to learn
+  // rather than the same chart played faster:
+  //   EASY   tap + slash                      — touch, and flick
+  //   NORMAL + hold                           — and stay
+  //   HARD   + bomb, diagonal slashes, overlapping holds
+  //
+  // EASY gets slashes from the start on purpose. Held back to NORMAL they arrive
+  // together with holds and with twice the density, which is three new things at
+  // once; and a tap-only EASY is v1 with a worse input method.
   DIFFS: {
-    easy:   { nps: 1.6, rows: 1, cellGap: 0.36, globalGap: 0.22,
-              slashShare: 0,    dirSet: 'none',     holdShare: 0,
+    easy:   { nps: 1.6, cellGap: 0.36, globalGap: 0.22,
+              slashShare: 0.22, dirSet: 'cardinal', holdShare: 0,
               holdMax: 0,   soloHold: true,  bombShare: 0 },
-    normal: { nps: 2.8, rows: 2, cellGap: 0.24, globalGap: 0.13,
+    normal: { nps: 2.8, cellGap: 0.24, globalGap: 0.13,
               slashShare: 0.38, dirSet: 'cardinal', holdShare: 0.10,
               holdMax: 1.6, soloHold: true,  bombShare: 0 },
-    hard:   { nps: 4.4, rows: 2, cellGap: 0.15, globalGap: 0.08,
+    hard:   { nps: 4.4, cellGap: 0.15, globalGap: 0.08,
               slashShare: 0.55, dirSet: 'all',      holdShare: 0.16,
               holdMax: 2.6, soloHold: false, bombShare: 0.05 }
   },
@@ -127,7 +136,7 @@ RG.song = { buffer: null, label: '', chart: null };
 
 // Transient visual state, written by game.js and read by render.js.
 RG.fx = {
-  cellFlash: [],      // [col][row] -> performance.now() of the last touch
+  cellFlash: [],      // [col][row] -> performance.now() of the last touch (row is always 0)
   hits: [],           // rings blooming at the hit plane
   slashes: [],        // the streak a finger leaves behind
   judge: null,

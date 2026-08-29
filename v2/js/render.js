@@ -31,22 +31,23 @@
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // Four cells across and two rows down both have to fit, so the cell size is
-    // whichever of the two constraints bites first. Without the height term a
-    // landscape phone puts the bottom row off the bottom of the stage.
-    unit = Math.max(28, Math.min(W * 0.20, H * 0.20));
+    // Four cells across is what sets the width; the height term only keeps a
+    // short landscape stage from pushing the row off the bottom.
+    unit = Math.max(28, Math.min(W * 0.20, H * 0.22));
     focal = unit * V.zNear;
     // A cell is one world unit wide, but not necessarily one tall. On a tall
-    // phone the width is what limits the cell size, and square cells then leave
-    // most of the stage empty and the targets smaller than a thumb deserves —
-    // so the rows are pushed apart until the grid uses its share of the height.
-    // Capped: past about 1.45 the cells stop reading as cells.
-    rowSpread = Math.max(1, Math.min(1.45, (H * 0.40) / (C.ROWS * unit)));
-    // The corridor is given the top two thirds and the grid the rest, with a
-    // band left clear below the hit frame for the judgement label — the one
-    // place on screen a note never flies through.
-    horizonY = H * 0.09;
-    hitCY = H * 0.66;
+    // phone the width is what limits the cell size, and a square cell then
+    // leaves most of the stage empty and the target smaller than a thumb
+    // deserves — so the cell is stretched until the row is about a fifth of the
+    // stage. Capped: past 1.5 the cells stop reading as cells and start reading
+    // as lanes, which is the v1 game.
+    rowSpread = Math.max(1, Math.min(1.5, (H * 0.20) / unit));
+    // The corridor gets the top of the stage and the grid sits low, where a thumb
+    // already rests — a row this shallow floated uncomfortably high in the middle.
+    // Below it a band stays clear for the judgement label, the one place on screen
+    // a note never flies through.
+    horizonY = H * 0.10;
+    hitCY = H * 0.71;
     camH = (hitCY - horizonY) / unit;
   }
 
@@ -65,7 +66,9 @@
   }
 
   function colX(col) { return (col - (C.COLS - 1) / 2); }   // -1.5 .. 1.5
-  function rowY(row) { return (row === 0 ? 0.5 : -0.5) * rowSpread; }   // row 0 is lower
+  // Centred on the corridor's axis: with one row that is the middle of the
+  // screen, and the formula still spreads evenly if a row is ever added back.
+  function rowY(row) { return (row - (C.ROWS - 1) / 2) * rowSpread; }
   function halfH() { return (C.ROWS / 2) * rowSpread; }
 
   // Where a cell's touch target sits on screen. game.js judges against this and
@@ -172,10 +175,6 @@
       line3(x, -hy, V.zFar, x, -hy, V.zNear, edge ? 0.5 : 0.22, edge ? 2 : 1, '#ff2e88');
       line3(x,  hy, V.zFar, x,  hy, V.zNear, edge ? 0.5 : 0.22, edge ? 2 : 1, '#ff2e88');
     }
-    if (C.ROWS > 1) {
-      line3(-hx, 0, V.zFar, -hx, 0, V.zNear, 0.20, 1, '#b57bee');
-      line3( hx, 0, V.zFar,  hx, 0, V.zNear, 0.20, 1, '#b57bee');
-    }
     line3(-hx, -hy, V.zFar, -hx, -hy, V.zNear, 0.45, 2, '#b57bee');
     line3( hx, -hy, V.zFar,  hx, -hy, V.zNear, 0.45, 2, '#b57bee');
 
@@ -189,7 +188,7 @@
   // frame, and the floor lines in particular run all the way down across the
   // target area — seen through translucent cells they read as cracks. Stopping
   // the corridor at an opaque wall is what makes the targets legible.
-  function drawStage(rows, now, fx, game) {
+  function drawStage(now, fx, game) {
     var hx = V.gridHalf, hy = halfH();
     var tl = proj(-hx, -hy, V.zNear), br = proj(hx, hy, V.zNear);
     var pw = br.x - tl.x, ph = br.y - tl.y;
@@ -215,7 +214,7 @@
     var pad = unit * 0.06;
     var cw = unit - pad * 2, ch = unit * rowSpread - pad * 2;
     for (var col = 0; col < C.COLS; col++) {
-      for (var row = 0; row < rows; row++) {
+      for (var row = 0; row < C.ROWS; row++) {
         var c = cellCenter(col, row);
         var x = c.x - cw / 2, y = c.y - ch / 2;
         var flash = now - ((fx.cellFlash[col] && fx.cellFlash[col][row]) || -9e9);
@@ -350,7 +349,6 @@
     var fx = RG.fx;
     var now = performance.now();
     var approach = RG.game.approachTime();
-    var rows = C.DIFFS[RG.settings.diff].rows;
 
     clear();
     ctx.save();
@@ -362,7 +360,7 @@
     }
 
     drawCorridor(Math.max(0, t));
-    drawStage(rows, now, fx, game);
+    drawStage(now, fx, game);
 
     // Tails behind heads, and everything far before everything near: with no depth
     // buffer the draw order is the depth order.

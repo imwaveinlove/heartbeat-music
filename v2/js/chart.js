@@ -5,7 +5,7 @@
  * still satisfy the spacing rules until the difficulty's note budget is full.
  *
  * What is new is everything after that. v1 handed the picked onsets straight to
- * four lanes; here each one also needs a row, a note kind, and — for a slash — a
+ * four lanes; here each one also needs a note kind and — for a slash — a
  * direction that flows out of the previous one instead of fighting it.
  */
 (function () {
@@ -106,70 +106,64 @@
     return best;
   }
 
-  // ---------- rows ----------
-  // Loud onsets sit on the bottom row and quiet ones on top, so the heavy part of
-  // the music lands where the hand already rests. Two notes running back to back
-  // in one column then get pushed apart anyway: a column that never changes row
-  // is a stationary finger, which is exactly the v1 game this version is not.
-  function assignRows(notes, rows) {
-    if (rows < 2) { notes.forEach(function (n) { n.row = 0; }); return; }
-
-    var byCol = [[], [], [], []];
-    notes.forEach(function (n) { byCol[n.col].push(n.strength); });
-    var median = byCol.map(function (list) {
-      if (!list.length) return 0;
-      var s = list.slice().sort(function (a, b) { return a - b; });
-      return s[s.length >> 1];
-    });
-
-    var lastRow = [-1, -1, -1, -1], lastTime = [-9, -9, -9, -9];
-    for (var i = 0; i < notes.length; i++) {
-      var n = notes[i];
-      var row = n.strength >= median[n.col] ? 0 : 1;
-      if (row === lastRow[n.col] && n.time - lastTime[n.col] < 0.62) row = 1 - row;
-      n.row = row;
-      lastRow[n.col] = row;
-      lastTime[n.col] = n.time;
-    }
-  }
-
   // ---------- holds ----------
-  // Same rule as v1, read on the grid: how far a tail may run is what actually
-  // decides how hard a chart feels. With soloHold on, a tail may not overlap a
-  // note in ANY cell, so a hold is always played on its own; with it off, the
-  // rest of the grid keeps firing while a finger is pinned in place.
+  // How far a tail may run is what actually decides how hard a chart feels. With
+  // soloHold on, a tail may not overlap a note in ANY column, so a hold is always
+  // played on its own; with it off, the other columns keep firing while a finger
+  // is pinned in place.
+  //
+  // The catch is that "place a hold only where there happens to be room" yields
+  // almost none: at NORMAL's density the gap between two notes is about 0.36s and
+  // a tail needs 0.34s plus clearance, so the budget goes unspent and the level
+  // that is supposed to introduce holds shows five in a whole song. So a tail is
+  // allowed to *make* its room, dropping up to two taps that stand in its way —
+  // which is what a human charter does when writing a sustain in.
   function assignHolds(notes, cfg, soloHold) {
     var budget = Math.floor(notes.length * (cfg.holdShare || 0));
-    if (budget < 1 || !cfg.holdMax) return;
+    if (budget < 1 || !cfg.holdMax) return notes;
 
-    var nextInCol = [null, null, null, null];
-    var nextAny = null;
-    for (var i = notes.length - 1; i >= 0; i--) {
-      var n = notes[i];
-      var colRoom = nextInCol[n.col] === null
-        ? cfg.holdMax
-        : Math.max(0, nextInCol[n.col] - n.time - cfg.cellGap);
-      var anyRoom = nextAny === null
-        ? cfg.holdMax
-        : Math.max(0, nextAny - n.time - cfg.globalGap);
-      n.maxTail = soloHold ? Math.min(colRoom, anyRoom) : colRoom;
-      nextInCol[n.col] = n.time;
-      nextAny = n.time;
+    var MAX_REMOVE = 2;
+    var order = notes.slice().sort(function (a, b) { return b.sustain - a.sustain; });
+    var placed = 0;
+
+    for (var i = 0; i < order.length && placed < budget; i++) {
+      var n = order[i];
+      if (n.removed || n.type !== C.TAP) continue;
+      // Sorted by sustain, so once the longest remaining note is too short to
+      // hold, so is everything after it.
+      if (Math.min(n.sustain, cfg.holdMax) < C.HOLD.MIN) break;
+
+      // What the tail would have to run over, nearest first.
+      var after = [];
+      for (var j = 0; j < notes.length; j++) {
+        var m = notes[j];
+        if (m === n || m.removed || m.time <= n.time) continue;
+        if (!soloHold && m.col !== n.col) continue;
+        after.push(m);
+      }
+      after.sort(function (a, b) { return a.time - b.time; });
+
+      // Room if the nearest k of them were dropped. k = 0 first, so a tail only
+      // removes notes when it genuinely cannot fit around them.
+      var drop = -1, tail = 0;
+      for (var k = 0; k <= MAX_REMOVE && k <= after.length; k++) {
+        if (k > 0 && after[k - 1].type !== C.TAP) break;   // never eat another hold
+        var next = after[k];
+        var gap = next ? (next.col === n.col ? cfg.cellGap : cfg.globalGap) : 0;
+        var room = next ? next.time - gap - n.time : cfg.holdMax;
+        var t = Math.min(n.sustain, cfg.holdMax, room);
+        if (t >= C.HOLD.MIN) { drop = k; tail = t; break; }
+      }
+      if (drop < 0) continue;
+
+      for (var d = 0; d < drop; d++) after[d].removed = true;
+      n.type = C.HOLD;
+      n.hold = tail;
+      n.holdEnd = n.time + tail;
+      placed++;
     }
 
-    notes.slice()
-      .sort(function (a, b) { return b.sustain - a.sustain; })
-      .slice(0, budget)
-      .forEach(function (n) {
-        var tail = Math.min(n.sustain, n.maxTail, cfg.holdMax);
-        if (tail >= C.HOLD.MIN) {
-          n.type = C.HOLD;
-          n.hold = tail;
-          n.holdEnd = n.time + tail;
-        }
-      });
-
-    notes.forEach(function (n) { delete n.maxTail; });
+    return notes.filter(function (n) { return !n.removed; });
   }
 
   // ---------- slashes ----------
@@ -225,9 +219,9 @@
   }
 
   // ---------- bombs ----------
-  // A bomb goes just after a note, in the other row of a neighbouring column —
-  // right where a finger sliding toward the next note would drift through. It has
-  // to sit somewhere the player might actually go, or it is only decoration.
+  // A bomb goes just after a note, in the cell next door — right where a finger
+  // sliding toward the next note would drift through. It has to sit somewhere the
+  // player might actually go, or it is only decoration.
   function insertBombs(notes, cfg) {
     var budget = Math.floor(notes.length * (cfg.bombShare || 0));
     if (budget < 1) return notes;
@@ -273,7 +267,7 @@
       insertSorted(occupied[col], at);
       insertSorted(everywhere, at);
       bombs.push({
-        time: at, col: col, row: cfg.rows > 1 ? 1 - n.row : 0,
+        time: at, col: col, row: 0,
         type: C.BOMB, dir: 0, strength: 0, sustain: 0, hold: 0, holdEnd: 0
       });
     }
@@ -331,8 +325,7 @@
       }
       chosen.sort(function (a, b) { return a.time - b.time; });
 
-      assignRows(chosen, cfg.rows);
-      assignHolds(chosen, cfg, soloHold);
+      chosen = assignHolds(chosen, cfg, soloHold);
       assignSlashes(chosen, cfg);
       chosen = insertBombs(chosen, cfg);
       chosen.forEach(function (n) { delete n.strength; delete n.sustain; });
