@@ -73,6 +73,10 @@ RG.settings = {
   })()
 };
 
+// v1's page sits one level below songs/ now that v2 has the root, and
+// js/songs.js reads this to find the built-in tracks.
+RG.songsBase = '../songs/';
+
 // The loaded song and its generated chart.
 RG.song = { buffer: null, label: '', chart: null };
 

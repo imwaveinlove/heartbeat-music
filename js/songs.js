@@ -20,7 +20,7 @@
     { id: 'futari-no-melody', title: 'ふたりのメロディ', note: '1:27', file: 'futari-no-melody.mp3' }
   ];
 
-  // Where songs/ sits relative to the page. v2/index.html is one level down and
+  // Where songs/ sits relative to the page. v1/index.html is one level down and
   // sets this to '../songs/' before loading this file, so both games share one
   // track list — adding a song stays a single edit.
   var BASE = RG.songsBase || 'songs/';

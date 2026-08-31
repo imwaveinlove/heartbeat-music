@@ -6,10 +6,12 @@
 
 버전이 둘 있고, 수록곡·마스코트·타격음·녹음 기능은 공유합니다.
 
-| | 조작 | 필드 |
-|---|---|---|
-| **v1** `index.html` | `D` `F` `J` `K` 키 / 하단 패드 4개 | 위에서 내려오는 4레인 |
-| **v2** `v2/index.html` | 화살표 방향으로 드래그 (마우스도 가능) | 정면에서 **날아오는** 4칸 |
+| | 주소 | 조작 | 필드 |
+|---|---|---|---|
+| **v2** (현재) | `/` | 화살표 방향으로 드래그 (마우스도 가능) | 정면에서 **날아오는** 4칸 |
+| **v1** | `/v1/` | `D` `F` `J` `K` 키 / 하단 패드 4개 | 위에서 내려오는 4레인 |
+
+v2가 루트입니다. 사이트 주소 하나만 알면 되고, v1은 그 아래 보관되어 있습니다.
 
 v2는 [v2 — 날아오는 노트](#v2--날아오는-노트) 를 보세요. 아래 문서는 별도 표시가 없으면 v1 기준입니다.
 
@@ -28,7 +30,7 @@ v2는 [v2 — 날아오는 노트](#v2--날아오는-노트) 를 보세요. 아�
 ### 수록곡을 추가하려면
 
 1. `songs/` 에 mp3를 넣습니다.
-2. `js/songs.js` 의 `builtin` 배열에 항목을 추가합니다. **v1·v2가 이 목록 하나를 같이 씁니다** — v2는 `../js/songs.js` 를 그대로 불러오고, 경로 차이는 `RG.songsBase` 로만 흡수하므로 곡 추가는 여기 한 번이면 끝입니다(그래서 `file` 값은 `songs/` 를 뺀 파일 이름만 씁니다).
+2. `js/songs.js` 의 `builtin` 배열에 항목을 추가합니다. **v1·v2가 이 목록 하나를 같이 씁니다** — 경로 차이는 `RG.songsBase` 로만 흡수하므로(루트에 있는 v2는 기본값 `songs/`, `/v1/` 에 있는 v1은 `../songs/`) 곡 추가는 여기 한 번이면 끝입니다. 그래서 `file` 값은 `songs/` 를 뺀 파일 이름만 씁니다.
 3. `python tools/embed-songs.py` 를 실행합니다.
 
 3번이 필요한 이유: 브라우저는 `file://` 에서 `fetch()` 를 차단하므로, `index.html` 을 더블클릭해서 연 페이지는 `songs/*.mp3` 를 읽을 수 없습니다. 이 스크립트가 mp3를 base64로 `songs/tracks.js` 에 구워 넣어 그 제약을 우회합니다. 로컬 서버나 GitHub Pages처럼 http로 열면 mp3를 직접 fetch하므로 이 파일은 필요 없고, 그래서 git에는 포함하지 않습니다(수록곡 5곡 기준 약 13.5MB).
@@ -294,19 +296,19 @@ v1이 "레인 위 어느 키를 언제 누를까"였다면 v2는 "화면 어디�
 ### v2 파일
 
 ```
-v2/index.html         마크업 + 스크립트 태그
-v2/css/v2.css         ../css/style.css 위에 얹는 것만
-v2/js/config.js       v2 상수 (격자 · 방향 · 시야) · RG.songsBase
-v2/js/dom.js          DOM 참조
-v2/js/audio.js        ../js/audio.js 를 확장 — 드래그 · 폭탄 소리
-v2/js/chart.js        분석은 v1과 동일 + 행 · 종류 · 방향 · 폭탄
-v2/js/render.js       원근 투영 · 복도 · 노트 그리기
-v2/js/game.js         판정 · 포인터 추적 · 스와이프 검출
-v2/js/ui.js           메뉴 · 설정
-v2/js/main.js         부트스트랩
+index.html            마크업 + 스크립트 태그 (사이트 루트)
+css/v2.css            css/style.css 위에 얹는 것만
+js/v2/config.js       v2 상수 (격자 · 방향 · 시야)
+js/v2/dom.js          DOM 참조
+js/v2/audio.js        공유 js/audio.js 를 확장 — 드래그 · 폭탄 소리
+js/v2/chart.js        분석은 v1과 동일 + 종류 · 방향 · 폭탄
+js/v2/render.js       원근 투영 · 복도 · 노트 · 콤보 배너
+js/v2/game.js         판정 · 포인터 추적 · 스와이프 검출
+js/v2/ui.js           메뉴 · 설정
+js/v2/main.js         부트스트랩
 ```
 
-`../js/icon.js` `../js/audio.js` `../js/capture.js` `../js/songs.js` `../songs/tracks.js` 는 상위 폴더 것을 **그대로** 불러옵니다. 네임스페이스가 같은 `RG`라서 가능하고, `v2/js/audio.js` 는 상위 `RG.audio` 를 대체하지 않고 `slash` · `bomb` 만 얹습니다 — 같은 컴프레서 버스를 써야 새 소리가 음악에 게인을 쌓지 않습니다.
+`js/icon.js` `js/audio.js` `js/capture.js` `js/songs.js` 는 v1과 **같은 파일을 그대로** 씁니다. 네임스페이스가 같은 `RG`라서 가능하고, `js/v2/audio.js` 는 공유 `RG.audio` 를 대체하지 않고 `slash` · `bomb` 만 얹습니다 — 같은 컴프레서 버스를 써야 새 소리가 음악에 게인을 쌓지 않습니다.
 
 ## 아이콘을 다른 프로젝트에서 쓰기
 
@@ -362,26 +364,33 @@ python tools/make-icon-png.py --bg "#ffe3f1" --out icon-pixel-bg.png
 
 ## 구조
 
+공유하는 것은 `js/` 에, 한 버전에만 해당하는 것은 `js/v1` · `js/v2` 에 둡니다. 두 버전의 파일 이름이 대부분 같아서(`config` `dom` `chart` `render` `game` `ui` `main`) 한곳에 섞으면 충돌합니다.
+
 ```
-index.html            마크업 + 스크립트 태그
-css/style.css         스타일 (가로/세로 반응형)
-js/config.js          상수 · 공유 네임스페이스(RG)
-js/dom.js             DOM 참조
-js/icon.js            마스코트 픽셀 아트 → SVG · 파비콘
-js/audio.js           오디오 컨텍스트 · 타격음 합성
-js/capture.js         탭 오디오 녹음 → AudioBuffer
-js/songs.js           수록곡 목록 · 로딩(base64 / fetch)
-js/chart.js           주파수 분석 → 자동 채보
-js/render.js          캔버스 크기 계산 · 그리기
-js/game.js            판정 · 점수 · 프레임 루프 · 입력
-js/ui.js              메뉴 · 설정 · 전체화면
-js/main.js            부트스트랩
+index.html            v2 페이지 (사이트 루트)
+v1/index.html         v1 페이지
+guide.html            게임 방법
+about.html            소개
+privacy.html          개인정보처리방침
+ads.txt               애드센스 — 실제로는 사이트 루트에도 필요, 아래 참고
+css/style.css         두 버전이 함께 쓰는 스타일
+css/v2.css            v2 가 그 위에 얹는 것만
+css/page.css          내용 페이지(guide/about/privacy) 스타일
+js/icon.js            [공유] 마스코트 픽셀 아트 → SVG · 파비콘
+js/audio.js           [공유] 오디오 컨텍스트 · 타격음 합성
+js/capture.js         [공유] 탭 오디오 녹음 → AudioBuffer
+js/songs.js           [공유] 수록곡 목록 · 로딩(base64 / fetch)
+js/v1/*.js            v1 전용 (config dom chart render game ui main)
+js/v2/*.js            v2 전용 (+ audio.js — 공유 RG.audio 를 확장)
 songs/                mp3 원본
 tools/embed-songs.py  mp3 → base64 (file:// 대응)
 tools/devserver.py    캐시 끈 로컬 서버 (개발용)
 tools/make-icon-png.py  아이콘 그리드 → PNG 내보내기
-v2/                   v2 (날아오는 노트) — 위 v2 절 참고
 ```
+
+### ads.txt 는 이 저장소만으로 부족합니다
+
+애드센스는 ads.txt 를 **호스트 루트에서만** 읽습니다. 이 사이트는 `imwaveinlove.github.io/heartbeat-music/` 이라는 프로젝트 페이지라서, 크롤러가 보는 곳은 `imwaveinlove.github.io/ads.txt` 이고 하위 경로의 ads.txt 는 무시합니다. 별도로 `imwaveinlove.github.io` 이름의 저장소를 만들어 그 루트에 같은 내용을 두어야 합니다. 커스텀 도메인을 붙이면 그때는 이 저장소의 ads.txt 가 루트가 됩니다.
 
 `import`/`export` 대신 일반 `<script>`와 전역 네임스페이스 `RG`를 씁니다. ES 모듈은 브라우저가 `file://`에서 로딩을 차단해서, 파일을 더블클릭해 여는 방식이 동작하지 않기 때문입니다. 스크립트 로드 순서는 의존성 순서이므로 `index.html`에서 순서를 바꾸면 안 됩니다.
 

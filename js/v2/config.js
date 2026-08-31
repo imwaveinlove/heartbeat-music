@@ -4,8 +4,8 @@
  * four keys under four fingers, notes fly out of a vanishing point toward the
  * player and are played by touching and dragging on the glass.
  *
- * The namespace is still window.RG, so ../js/audio.js, ../js/capture.js and
- * ../js/icon.js load unchanged. Everything under v2/js replaces its v1 twin.
+ * The namespace is still window.RG, so the shared js/audio.js, js/capture.js
+ * and js/icon.js load unchanged. Everything under js/v2 replaces its v1 twin.
  */
 window.RG = window.RG || {};
 RG.V2 = true;
@@ -162,6 +162,3 @@ RG.fx = {
   comboPop: 0,        // last combo increment — the mascots bounce off this
   comboMilestone: 0   // last multiple of ten — they throw hearts off this
 };
-
-// v2/index.html sits one level below songs/, and ../js/songs.js reads this.
-RG.songsBase = '../songs/';

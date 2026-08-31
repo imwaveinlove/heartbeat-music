@@ -1,4 +1,4 @@
-/* audio.js — the two sounds v2 adds on top of ../js/audio.js.
+/* audio.js — the two sounds v2 adds on top of the shared js/audio.js.
  *
  * Loaded after it and extends the same RG.audio object, sharing its context, its
  * compressor bus and its noise buffer. A separate chain here would bypass that
