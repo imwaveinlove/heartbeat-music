@@ -349,19 +349,34 @@
     return k * k * 0.30;
   }
 
-  function drawMascot(img, cx, cy, h, scale) {
-    if (!img || !img.naturalWidth) return;
-    var w = h * (img.naturalWidth / img.naturalHeight);
+  // How big to draw a mascot, given a nominal side. Matched by AREA rather than
+  // by height: the panda is a nearly square 480x440 drawing and the cat a wide,
+  // short 245x150 one, so giving them the same height — which is what the menu
+  // does, and what this did at first — leaves the cat spanning half again as
+  // wide and plainly reading as the bigger of the two. Equal area splits the
+  // difference between them instead of loading all of it onto the cat's width.
+  function mascotBox(img, side) {
+    if (!img || !img.naturalWidth) return null;
+    var w = img.naturalWidth, h = img.naturalHeight;
+    var s = side / Math.sqrt(w * h);
+    return { w: w * s, h: h * s };
+  }
+
+  function drawMascot(img, cx, cy, side, scale) {
+    var b = mascotBox(img, side);
+    if (!b) return;
     // Both characters are pixel art, and the menu shows them with
     // image-rendering: pixelated. Smoothed up on the canvas they turn to mush.
     var smooth = ctx.imageSmoothingEnabled;
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(img, cx - w * scale / 2, cy - h * scale / 2, w * scale, h * scale);
+    ctx.drawImage(img, cx - b.w * scale / 2, cy - b.h * scale / 2,
+                  b.w * scale, b.h * scale);
     ctx.imageSmoothingEnabled = smooth;
   }
 
-  function mascotWidth(img, h) {
-    return img && img.naturalWidth ? h * (img.naturalWidth / img.naturalHeight) : 0;
+  function mascotWidth(img, side) {
+    var b = mascotBox(img, side);
+    return b ? b.w : 0;
   }
 
   // Every tenth combo the pair throws hearts. Positions come from the age rather
@@ -373,7 +388,7 @@
   function comboHearts(x, y, age, size, headroom) {
     var p = age / 700;
     if (p < 0 || p >= 1) return;
-    var reach = Math.max(size * 0.55, Math.min(size * 1.25, headroom));
+    var reach = Math.min(size * 1.25, Math.max(0, headroom));
     ctx.globalAlpha = (1 - p) * 0.95;
     for (var i = 0; i < 5; i++) {
       var a = -Math.PI / 2 + (i - 2) * 0.5;
@@ -386,19 +401,52 @@
     ctx.globalAlpha = 1;
   }
 
+  // How far the banner reaches above and below its centre line, per the given
+  // text size. Both halves are measured at full bounce, because that is when it
+  // is largest and therefore when it would spill.
+  var MAX_POP = 1.30;
+  function bannerExtent(fs, grow) {
+    var side = fs * 1.45 * grow;
+    var bp = mascotBox(mascots.panda, side), bc = mascotBox(mascots.cat, side);
+    var tallest = Math.max(bp ? bp.h : side, bc ? bc.h : side) / 2 * MAX_POP;
+    return {
+      up: tallest + side * 0.55 * 0.30,        // half height, plus the hop
+      down: Math.max(tallest, fs * 0.88)       // or the COMBO label under the number
+    };
+  }
+
   function drawCombo(game, fx, now) {
     if (game.combo < 2) return;
     var bottom = bandBottom();
-    var fs = Math.max(18, Math.min(bottom * 0.42, 56));
-    var cy = bottom * 0.52;
+    var grow0 = 1 + Math.min(game.combo, 100) / 100 * 0.22;
+    var fs = Math.max(14, Math.min(bottom * 0.42, 56));
+
+    // Fit the banner to the band's height as well as the stage's width. Sized on
+    // the text alone it clears the corridor on a tall phone and pokes out of the
+    // top of the screen on a short landscape one, where the band is barely taller
+    // than the mascots themselves.
+    var ext = bannerExtent(fs, grow0);
+    var avail = bottom - 6;
+    if (ext.up + ext.down > avail && ext.up + ext.down > 0) {
+      fs *= avail / (ext.up + ext.down);
+      ext = bannerExtent(fs, grow0);
+    }
+    var cy = 3 + ext.up + Math.max(0, (avail - ext.up - ext.down) / 2);
 
     // The pair grows a little as the run does, so a long combo reads as size
     // before the number itself is read.
-    var grow = 1 + Math.min(game.combo, 100) / 100 * 0.22;
+    var grow = grow0;
     var at = fx.comboPop || -9e9;
     var boost = pop(at, now, 0);
-    var pandaScale = 1 + boost;
-    var catScale = 1 + pop(at, now, 70);      // a beat behind, so the two are alive
+    // ONE scale for both. Giving the cat a delayed bounce made the pair feel
+    // alive, but it also meant the two were never the same size at the same
+    // instant — and while a combo is running the bounce retriggers constantly,
+    // so "never" is the whole time. It reads as two mismatched drawings, not as
+    // liveliness. The delay lives in the hop below instead, where being a beat
+    // apart is exactly what it looks like.
+    var scale = 1 + boost;
+    var hop = boost;
+    var hopLate = pop(at, now, 70);
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -407,10 +455,9 @@
     // gets is mid-bounce, so the bounce is in the measurement — sizing to the
     // resting width lets a three-digit combo push the cat off the screen exactly
     // when the player is doing best.
-    var MAX_POP = 1.30;
     ctx.font = '800 ' + Math.round(fs) + 'px -apple-system, Segoe UI, sans-serif';
     var nominal = ctx.measureText(game.combo).width;
-    var mh0 = fs * 1.35 * grow;
+    var mh0 = fs * 1.45 * grow;
     var wide = nominal * (1 + 0.55 * 0.30)
              + (mascotWidth(mascots.panda, mh0) + mascotWidth(mascots.cat, mh0)) * MAX_POP
              + fs * 0.68;
@@ -420,17 +467,17 @@
     ctx.font = '800 ' + Math.round(fs * (1 + boost * 0.55)) + 'px -apple-system, Segoe UI, sans-serif';
     var half = ctx.measureText(game.combo).width / 2;
 
-    var mh = fs * 1.35 * grow;
+    var mh = fs * 1.45 * grow;
     var gap = fs * 0.34;
     var px = W / 2 - half - gap - mascotWidth(mascots.panda, mh) / 2;
     var cx2 = W / 2 + half + gap + mascotWidth(mascots.cat, mh) / 2;
     // The bounce lifts them as well as swelling them: a hop reads as delight
     // where a pulse on its own reads as a loading spinner.
-    var py = cy - (pandaScale - 1) * mh * 0.5;
-    var cyy = cy - (catScale - 1) * mh * 0.5;
+    var py = cy - hop * mh * 0.55;
+    var cyy = cy - hopLate * mh * 0.55;
 
-    drawMascot(mascots.panda, px, py, mh, pandaScale);
-    drawMascot(mascots.cat, cx2, cyy, mh, catScale);
+    drawMascot(mascots.panda, px, py, mh, scale);
+    drawMascot(mascots.cat, cx2, cyy, mh, scale);
 
     if (fx.comboMilestone) {
       var age = now - fx.comboMilestone;
