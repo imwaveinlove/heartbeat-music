@@ -67,6 +67,10 @@
       g.counts[kind]++;
       g.combo++;
       if (g.combo > g.maxCombo) g.maxCombo = g.combo;
+      // The banner reads these; it owns where the pair is on screen, so it only
+      // needs to be told that something happened and when.
+      fx.comboPop = performance.now();
+      if (g.combo >= 10 && g.combo % 10 === 0) fx.comboMilestone = fx.comboPop;
       var mult = 1 + Math.min(g.combo, 100) * 0.005;
       g.score += Math.round(C.SCORES[kind] * mult);
       g.weighted += C.SCORES[kind];
@@ -438,6 +442,7 @@
     RG.game.current = current;
 
     fx.hits = []; fx.slashes = []; fx.judge = null; fx.shake = 0;
+    fx.comboPop = 0; fx.comboMilestone = 0;
     fx.cellFlash = [];
     for (var cf = 0; cf < C.COLS; cf++) {
       fx.cellFlash.push(new Array(C.ROWS).fill(0));

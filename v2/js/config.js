@@ -158,7 +158,9 @@ RG.fx = {
   hits: [],           // rings blooming at the hit plane
   slashes: [],        // the streak a finger leaves behind
   judge: null,
-  shake: 0            // set on a bomb, decays in render
+  shake: 0,           // set on a bomb, decays in render
+  comboPop: 0,        // last combo increment — the mascots bounce off this
+  comboMilestone: 0   // last multiple of ten — they throw hearts off this
 };
 
 // v2/index.html sits one level below songs/, and ../js/songs.js reads this.
