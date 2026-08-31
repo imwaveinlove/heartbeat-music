@@ -301,26 +301,33 @@
       return;
     }
 
-    // Every playable note is a heart. With no second shape to be told apart from,
-    // the arrow on its face is the only thing the eye has to resolve — which is
-    // the whole point of dropping the tap.
     ctx.shadowColor = color;
     ctx.shadowBlur = Math.min(18, r * 0.7);
     ctx.fillStyle = color;
+
+    if (note.type === C.SLASH) {
+      // A flat face, not a heart. The arrow is the only thing the eye has to
+      // resolve on a slash, and a heart spends its area on two lobes and a point
+      // — none of which the arrow can use — so at the sizes a note spends most
+      // of its flight at, the direction stopped being readable. The hearts are
+      // still on the field: a hold is one, and so are both mascots.
+      roundRect(p.x - r, p.y - r, r * 2, r * 2, r * 0.28);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+      ctx.lineWidth = Math.max(1.2, r * 0.13);
+      ctx.stroke();
+      fillArrow(p.x, p.y, r * 0.95, note.dir, 'rgba(255,255,255,0.97)');
+      ctx.globalAlpha = 1;
+      return;
+    }
+
     heartPath(p.x, p.y, r * 0.98);
     ctx.fill();
     ctx.shadowBlur = 0;
     ctx.strokeStyle = 'rgba(255,255,255,0.92)';
     ctx.lineWidth = Math.max(1.2, r * 0.13);
     ctx.stroke();
-
-    if (note.type === C.SLASH) {
-      // Sat a little high: a heart carries its mass above its point, so an arrow
-      // on the geometric centre reads as sliding off the bottom of it.
-      fillArrow(p.x, p.y - r * 0.12, r * 0.74, note.dir, 'rgba(255,255,255,0.97)');
-      ctx.globalAlpha = 1;
-      return;
-    }
 
     // A hold wears a ring where a slash wears an arrow: it is the one note
     // answered by staying still, so the absence of an arrow is the instruction.
@@ -349,21 +356,39 @@
     return k * k * 0.30;
   }
 
-  // How big to draw a mascot, given a nominal side. Matched by AREA rather than
-  // by height: the panda is a nearly square 480x440 drawing and the cat a wide,
-  // short 245x150 one, so giving them the same height — which is what the menu
-  // does, and what this did at first — leaves the cat spanning half again as
-  // wide and plainly reading as the bigger of the two. Equal area splits the
-  // difference between them instead of loading all of it onto the cat's width.
-  function mascotBox(img, side) {
+  // How big to draw a mascot, given a nominal side.
+  //
+  // The panda is a nearly square 480x440 drawing and the cat a wide, short
+  // 245x150 one, so there is no single obvious way to call them "the same size",
+  // and both of the obvious ones were tried and rejected by eye:
+  //
+  //   match on height (what the menu does)  -> the cat spans half again as wide
+  //                                            and reads as the bigger one
+  //   match on area                         -> the panda comes out 28% taller
+  //                                            and reads as the bigger one
+  //
+  // So perceived size weighs height more than width, but width still counts.
+  // WIDTH_WEIGHT is where between the two the pair actually looks matched: 0
+  // is match-on-height, 0.5 is match-on-area. It is a taste constant — nudge it
+  // toward 0 if the cat starts looking big again, toward 0.5 if the panda does.
+  var WIDTH_WEIGHT = 0.25;
+
+  // And a per-character trim on top, because the last of the difference is not
+  // geometry at all: the panda is black on a pale field and the cat is pale pink
+  // on it, and the darker of two shapes reads as the heavier one at the same
+  // measured size. No ratio of width to height can see that.
+  var MASCOT_TRIM = { panda: 0.92, cat: 1 };
+
+  function mascotBox(img, side, trim) {
     if (!img || !img.naturalWidth) return null;
     var w = img.naturalWidth, h = img.naturalHeight;
-    var s = side / Math.sqrt(w * h);
+    var s = (side * (trim || 1)) /
+            (Math.pow(w, WIDTH_WEIGHT) * Math.pow(h, 1 - WIDTH_WEIGHT));
     return { w: w * s, h: h * s };
   }
 
-  function drawMascot(img, cx, cy, side, scale) {
-    var b = mascotBox(img, side);
+  function drawMascot(img, cx, cy, side, scale, trim) {
+    var b = mascotBox(img, side, trim);
     if (!b) return;
     // Both characters are pixel art, and the menu shows them with
     // image-rendering: pixelated. Smoothed up on the canvas they turn to mush.
@@ -374,8 +399,8 @@
     ctx.imageSmoothingEnabled = smooth;
   }
 
-  function mascotWidth(img, side) {
-    var b = mascotBox(img, side);
+  function mascotWidth(img, side, trim) {
+    var b = mascotBox(img, side, trim);
     return b ? b.w : 0;
   }
 
@@ -407,7 +432,8 @@
   var MAX_POP = 1.30;
   function bannerExtent(fs, grow) {
     var side = fs * 1.45 * grow;
-    var bp = mascotBox(mascots.panda, side), bc = mascotBox(mascots.cat, side);
+    var bp = mascotBox(mascots.panda, side, MASCOT_TRIM.panda);
+    var bc = mascotBox(mascots.cat, side, MASCOT_TRIM.cat);
     var tallest = Math.max(bp ? bp.h : side, bc ? bc.h : side) / 2 * MAX_POP;
     return {
       up: tallest + side * 0.55 * 0.30,        // half height, plus the hop
@@ -459,7 +485,8 @@
     var nominal = ctx.measureText(game.combo).width;
     var mh0 = fs * 1.45 * grow;
     var wide = nominal * (1 + 0.55 * 0.30)
-             + (mascotWidth(mascots.panda, mh0) + mascotWidth(mascots.cat, mh0)) * MAX_POP
+             + (mascotWidth(mascots.panda, mh0, MASCOT_TRIM.panda)
+                + mascotWidth(mascots.cat, mh0, MASCOT_TRIM.cat)) * MAX_POP
              + fs * 0.68;
     var fit = Math.min(1, (W * 0.94) / wide);
     fs *= fit;
@@ -469,15 +496,15 @@
 
     var mh = fs * 1.45 * grow;
     var gap = fs * 0.34;
-    var px = W / 2 - half - gap - mascotWidth(mascots.panda, mh) / 2;
-    var cx2 = W / 2 + half + gap + mascotWidth(mascots.cat, mh) / 2;
+    var px = W / 2 - half - gap - mascotWidth(mascots.panda, mh, MASCOT_TRIM.panda) / 2;
+    var cx2 = W / 2 + half + gap + mascotWidth(mascots.cat, mh, MASCOT_TRIM.cat) / 2;
     // The bounce lifts them as well as swelling them: a hop reads as delight
     // where a pulse on its own reads as a loading spinner.
     var py = cy - hop * mh * 0.55;
     var cyy = cy - hopLate * mh * 0.55;
 
-    drawMascot(mascots.panda, px, py, mh, scale);
-    drawMascot(mascots.cat, cx2, cyy, mh, scale);
+    drawMascot(mascots.panda, px, py, mh, scale, MASCOT_TRIM.panda);
+    drawMascot(mascots.cat, cx2, cyy, mh, scale, MASCOT_TRIM.cat);
 
     if (fx.comboMilestone) {
       var age = now - fx.comboMilestone;
@@ -543,7 +570,9 @@
       var dt2 = Math.max(0, nt.time - t);
       var z = depthFor(dt2, approach);
       var p = proj(colX(nt.col), rowY(nt.row), z);
-      var r = 0.36 * p.s;
+      // A square of this radius spans 0.78 of a cell; the target inside its
+      // padding is 0.88, so the note fills the cell without touching its edge.
+      var r = 0.39 * p.s;
       // Fade in over the first slice of the flight so notes do not pop into
       // existence at the mouth of the corridor.
       var fade = Math.min(1, (1 - dt2 / approach) / 0.10);
