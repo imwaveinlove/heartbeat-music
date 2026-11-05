@@ -12,13 +12,18 @@
   // note = decoded length, floored the same way the in-game status line formats it
   // (80.8s reads as 1:20, not 1:21) so the two never disagree. Do not take these
   // from the mp3 header: the files are VBR and a bitrate guess reads far too long.
+  // preview = where the tap-to-listen snippet starts, in seconds: the loudest
+  // stretch of the song's middle, which is the chorus in every track here.
   var builtin = [
-    { id: 'koi-no-beat',      title: '恋のビート',       note: '1:20', file: 'koi-no-beat.mp3' },
-    { id: 'niji-wo-koete',    title: '虹を越えて',       note: '1:21', file: 'niji-wo-koete.mp3' },
-    { id: 'koi-no-melody',    title: '恋のメロディ',     note: '1:22', file: 'koi-no-melody.mp3' },
-    { id: 'pocket-no-oku-de', title: 'ポケットの奥で',   note: '1:42', file: 'pocket-no-oku-de.mp3' },
-    { id: 'futari-no-melody', title: 'ふたりのメロディ', note: '1:27', file: 'futari-no-melody.mp3' }
+    { id: 'koi-no-beat',      title: '恋のビート',       note: '1:20', file: 'koi-no-beat.mp3',      preview: 47 },
+    { id: 'niji-wo-koete',    title: '虹を越えて',       note: '1:21', file: 'niji-wo-koete.mp3',    preview: 46 },
+    { id: 'koi-no-melody',    title: '恋のメロディ',     note: '1:22', file: 'koi-no-melody.mp3',    preview: 25 },
+    { id: 'pocket-no-oku-de', title: 'ポケットの奥で',   note: '1:42', file: 'pocket-no-oku-de.mp3', preview: 62 },
+    { id: 'futari-no-melody', title: 'ふたりのメロディ', note: '1:27', file: 'futari-no-melody.mp3', preview: 50 },
+    { id: 'logout-no-nai-sekai', title: 'ログアウトのない世界', note: '3:49', file: 'logout-no-nai-sekai.mp3', preview: 148 },
+    { id: 'docchi-mo-suki',   title: 'どっちも好き',     note: '4:05', file: 'docchi-mo-suki.mp3',   preview: 145 }
   ];
+  var ARTIST = 'imwaveinlove';
 
   // Where songs/ sits relative to the page. v1/index.html is one level down and
   // sets this to '../songs/' before loading this file, so both games share one
@@ -57,5 +62,95 @@
     });
   }
 
-  RG.songs = { builtin: builtin, load: load };
+  // ---------- preview ----------
+  // A short snippet played from the already-decoded buffer when a track is tapped.
+  // Web Audio rather than an <audio> element: iOS ignores element.volume, so the
+  // fades would be hard cuts there, and the buffer is decoded anyway for the chart.
+  var PREVIEW_LEN = 15, FADE_IN = 0.5, FADE_OUT = 2;
+  var pv = { want: null, id: null, src: null, gain: null };
+  var listeners = [];
+  function emit() { listeners.forEach(function (fn) { fn(pv.id); }); }
+
+  function stop() {
+    pv.want = null;
+    if (pv.src) {
+      var c = RG.audio.ctx(), g = pv.gain.gain, src = pv.src;
+      src.onended = null;
+      g.cancelScheduledValues(c.currentTime);
+      g.setValueAtTime(g.value, c.currentTime);
+      g.linearRampToValueAtTime(0, c.currentTime + 0.12);   // no click on cut
+      try { src.stop(c.currentTime + 0.14); } catch (e) { /* already stopped */ }
+    }
+    pv.src = pv.gain = null;
+    if (pv.id !== null) { pv.id = null; emit(); }
+  }
+
+  // Called at tap time, before decoding: a slow decode of an earlier tap must not
+  // start its snippet over the track the player has since moved on to.
+  function want(id) { stop(); pv.want = id; }
+
+  function play(track, buffer) {
+    if (pv.want !== track.id) return;
+    var c = RG.audio.ctx();
+    var len = Math.min(PREVIEW_LEN, buffer.duration);
+    var at = Math.max(0, Math.min(track.preview || 0, buffer.duration - len));
+    var src = c.createBufferSource(), gain = c.createGain(), t = c.currentTime;
+    src.buffer = buffer;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.9, t + FADE_IN);
+    gain.gain.setValueAtTime(0.9, t + len - FADE_OUT);
+    gain.gain.linearRampToValueAtTime(0, t + len);
+    src.connect(gain).connect(c.destination);
+    src.start(t, at, len);
+    src.onended = function () {
+      if (pv.src !== src) return;
+      pv.src = pv.gain = null; pv.want = null; pv.id = null; emit();
+    };
+    pv.src = src; pv.gain = gain; pv.id = track.id;
+    emit();
+  }
+
+  // ---------- the scrolling track list ----------
+  // A playlist, one row per track: number, cover chip, title, artist · length, and
+  // a play mark that turns into a level meter while the snippet plays. onPick gets
+  // the track; select(id) marks the loaded one.
+  var COVERS = [['#ff6fae', '#ff2e88'], ['#cfa3f7', '#9a5ee0'], ['#6fe0d2', '#22b3a2'], ['#93bcff', '#4f86ef']];
+
+  function mountList(container, onPick) {
+    var rows = [];
+    builtin.forEach(function (track, i) {
+      var cv = COVERS[i % COVERS.length];
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'song-item';
+      b.setAttribute('role', 'option');
+      b.setAttribute('aria-selected', 'false');
+      b.innerHTML =
+        '<span class="si-no">' + (i < 9 ? '0' : '') + (i + 1) + '</span>' +
+        '<span class="si-art" style="background:linear-gradient(140deg,' + cv[0] + ',' + cv[1] + ')">♡</span>' +
+        '<span class="si-main"><span class="si-title">' + track.title + '</span>' +
+        '<span class="si-sub">' + ARTIST + ' · ' + track.note + '</span></span>' +
+        '<span class="si-play" aria-hidden="true"><i></i><i></i><i></i><i></i></span>';
+      b.addEventListener('click', function () { onPick(track); });
+      rows.push({ id: track.id, el: b });
+      container.appendChild(b);
+    });
+
+    function select(id) {
+      rows.forEach(function (r) {
+        var on = r.id === id;
+        r.el.classList.toggle('on', on);
+        r.el.setAttribute('aria-selected', String(on));
+      });
+    }
+    listeners.push(function (playingId) {
+      rows.forEach(function (r) { r.el.classList.toggle('playing', r.id === playingId); });
+    });
+    return { select: select };
+  }
+
+  RG.songs = {
+    builtin: builtin, load: load, mountList: mountList,
+    preview: { want: want, play: play, stop: stop, playing: function () { return pv.id; } }
+  };
 })();

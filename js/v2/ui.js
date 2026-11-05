@@ -76,45 +76,57 @@
   }
 
   // ---------- built-in tracks ----------
-  var songButtons = [];
-
-  function paintSongSelection(id) {
-    songButtons.forEach(function (entry) {
-      entry.button.classList.toggle('on', entry.id === id);
-    });
-  }
-
-  RG.songs.builtin.forEach(function (track) {
-    var b = document.createElement('button');
-    b.className = 'btn ghost song-btn';
-    b.innerHTML = '<span>' + track.title + '</span><small>' + track.note + '</small>';
-    b.addEventListener('click', function () {
-      RG.audio.ctx();                        // unlock audio inside the tap
-      paintSongSelection(track.id);          // mark it now; decoding takes a moment
-      setStatus('수록곡 불러오는 중...');
-      setBar(null);
-      el.playBtn.classList.add('hidden');
-      // Yield to the event loop so the status paints before base64 decoding
-      // blocks the thread. setTimeout, not rAF: rAF never fires in a hidden tab.
-      setTimeout(function () {
-        RG.songs.load(track)
-          .then(function (buf) { return prepare(buf, track.title + ' ' + track.note, track.id); })
-          .catch(function (err) { paintSongSelection(null); setStatus(err.message); });
-      }, 0);
-    });
-    songButtons.push({ id: track.id, button: b });
-    el.songRow.appendChild(b);
+  // Tapping a row loads it for play and lets a short snippet of it be heard.
+  // Tapping the loaded row again only starts or stops that snippet — the chart is
+  // already built, so there is nothing to redo.
+  // Bumped on every pick of any source. A long track decodes slower than a short
+  // one, so without it tapping A then B could finish loading B and then A, and
+  // A — the one the player left — would end up charted.
+  var pickToken = 0;
+  var songList = RG.songs.mountList(el.songRow, function (track) {
+    RG.audio.ctx();                          // unlock audio inside the tap
+    var pv = RG.songs.preview;
+    if (RG.song.id === track.id && RG.song.buffer) {
+      if (pv.playing() === track.id) pv.stop();
+      else { pv.want(track.id); pv.play(track, RG.song.buffer); }
+      return;
+    }
+    var my = ++pickToken;
+    pv.want(track.id);
+    paintSongSelection(track.id);            // mark it now; decoding takes a moment
+    setStatus('수록곡 불러오는 중...');
+    setBar(null);
+    el.playBtn.classList.add('hidden');
+    // Yield to the event loop so the status paints before base64 decoding blocks
+    // the thread. setTimeout, not rAF: rAF never fires while the tab is hidden.
+    setTimeout(function () {
+      RG.songs.load(track)
+        .then(function (buf) {
+          if (my !== pickToken) return;
+          pv.play(track, buf);
+          return prepare(buf, track.title + ' ' + track.note, track.id);
+        })
+        .catch(function (err) {
+          if (my !== pickToken) return;
+          pv.stop(); paintSongSelection(null); setStatus(err.message);
+        });
+    }, 0);
   });
+
+  // Which track is loaded is otherwise invisible until the song starts playing.
+  function paintSongSelection(id) { songList.select(id); }
 
   // ---------- song sources ----------
   el.pickFileBtn.addEventListener('click', function () {
     RG.audio.ctx();
+    RG.songs.preview.stop();
     el.fileInput.click();
   });
 
   el.fileInput.addEventListener('change', function (e) {
     var file = e.target.files && e.target.files[0];
     if (!file) return;
+    pickToken++;
     setStatus('음원 디코딩 중...');
     setBar(null);
     el.playBtn.classList.add('hidden');
@@ -138,6 +150,8 @@
   }
 
   el.captureBtn.addEventListener('click', function () {
+    pickToken++;
+    RG.songs.preview.stop();
     RG.audio.ctx();
     el.playBtn.classList.add('hidden');
     setStatus('공유 창에서 곡이 재생 중인 탭을 고르고 "탭 오디오도 공유" 를 체크해 주세요.');
@@ -208,8 +222,8 @@
   });
 
   // ---------- overlay buttons ----------
-  el.playBtn.addEventListener('click', function () { RG.game.start(); });
-  el.againBtn.addEventListener('click', function () { RG.game.start(); });
+  el.playBtn.addEventListener('click', function () { RG.songs.preview.stop(); RG.game.start(); });
+  el.againBtn.addEventListener('click', function () { RG.songs.preview.stop(); RG.game.start(); });
   el.menuBtn.addEventListener('click', function () { RG.game.toMenu(); });
   el.quitBtn.addEventListener('click', function () { RG.game.toMenu(); });
   el.resumeBtn.addEventListener('click', function () { RG.game.resume(); });
@@ -235,7 +249,7 @@
 
   // Leaving the tab mid-song would desync audio against the clock — pause instead.
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) RG.game.pause();
+    if (document.hidden) { RG.songs.preview.stop(); RG.game.pause(); }
   });
 
   RG.ui = { prepare: prepare, setStatus: setStatus };

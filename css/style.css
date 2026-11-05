@@ -186,27 +186,95 @@ h1 .heart { display: inline-block; animation: beat 1.1s ease-in-out infinite; }
 }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 
-/* Built-in track buttons: title over a small duration line. */
-.song-btn {
-  display: flex; flex-direction: column; align-items: center; gap: 1px;
-  padding: 9px 20px; line-height: 1.25;
+/* Built-in tracks: a scrolling playlist. About four rows show at once and the
+   bottom edge fades out, so it reads as "there is more below" without a label.
+   touch-action and overscroll-behavior matter here: the page itself is locked
+   (touch-action:none on body), and without contain a fling at the list's end
+   scrolls the whole menu instead. */
+.song-list {
+  width: min(340px, 100%); max-height: 264px;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  touch-action: pan-y; overscroll-behavior: contain;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 6px; border-radius: 22px;
+  background: rgba(255,255,255,.72);
+  box-shadow: 0 4px 0 var(--line), 0 9px 18px rgba(255,46,136,.14);
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent);
+          mask-image: linear-gradient(180deg, #000 calc(100% - 26px), transparent);
+  padding-bottom: 22px;
+  scrollbar-width: thin; scrollbar-color: var(--pink-soft) transparent;
 }
-.song-btn span { font-size: 14px; }
-.song-btn small { font-size: 10px; color: var(--dim); font-weight: 700; letter-spacing: .04em; }
+.song-list::-webkit-scrollbar { width: 5px; }
+.song-list::-webkit-scrollbar-thumb { background: var(--pink-soft); border-radius: 999px; }
+
+.song-item {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 7px 10px 7px 6px; border: none; border-radius: 16px;
+  background: transparent; color: var(--ink); text-align: left;
+  font: inherit; cursor: pointer;
+  transition: background .12s;
+}
+.song-item:active { background: var(--pink-pale); }
+.si-no {
+  width: 20px; flex: 0 0 auto; text-align: center;
+  font-size: 11px; font-weight: 800; color: var(--dim);
+  font-variant-numeric: tabular-nums;
+}
+.si-art {
+  width: 40px; height: 40px; flex: 0 0 auto; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 18px; font-weight: 800;
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.12), 0 2px 0 rgba(255,46,136,.18);
+}
+.si-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.si-title {
+  font-size: 14px; font-weight: 800; line-height: 1.25;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.si-sub { font-size: 10px; font-weight: 700; color: var(--dim); letter-spacing: .03em; }
+
+/* Right-hand mark: a play triangle at rest, a four-bar level meter while the
+   snippet plays. Both are drawn from the same four <i> so nothing swaps in. */
+.si-play {
+  width: 30px; height: 30px; flex: 0 0 auto; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; gap: 2px;
+  background: #fff; box-shadow: 0 2px 0 var(--line);
+  position: relative;
+}
+.si-play i { display: none; width: 3px; border-radius: 2px; background: var(--pink); }
+.si-play::before {
+  content: ''; margin-left: 3px;
+  border-style: solid; border-width: 6px 0 6px 10px;
+  border-color: transparent transparent transparent var(--pink-soft);
+}
+.song-item.playing .si-play::before { display: none; }
+.song-item.playing .si-play i {
+  display: block; height: 12px; transform-origin: 50% 100%;
+  animation: eq .9s ease-in-out infinite;
+}
+.song-item.playing .si-play i:nth-child(2) { animation-delay: -.3s; }
+.song-item.playing .si-play i:nth-child(3) { animation-delay: -.6s; }
+.song-item.playing .si-play i:nth-child(4) { animation-delay: -.15s; }
+@keyframes eq {
+  0%, 100% { transform: scaleY(.3); }
+  50%      { transform: scaleY(1); }
+}
 
 /* The chosen track. Without this nothing on screen says which song is loaded
    until it starts playing, so there is no way to check before pressing play. */
-.song-btn.on {
-  color: #fff; background: linear-gradient(180deg, #ff6fae, var(--pink));
-  box-shadow: 0 4px 0 #d81b6e, 0 9px 18px rgba(255,46,136,.32);
+.song-item.on {
+  background: linear-gradient(180deg, #ff6fae, var(--pink)); color: #fff;
+  box-shadow: 0 3px 0 #d81b6e;
 }
-.song-btn.on small { color: rgba(255,255,255,.85); }
-.song-btn.on::after {
-  content: '';
-  position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%);
-  border: 5px solid transparent; border-top-color: var(--pink);
+.song-item.on .si-no, .song-item.on .si-sub { color: rgba(255,255,255,.85); }
+.song-item.on .si-art { box-shadow: inset 0 -3px 0 rgba(0,0,0,.12), 0 0 0 2px rgba(255,255,255,.75); }
+.song-item.on .si-play { box-shadow: none; }
+.song-item.on .si-play::before { border-left-color: var(--pink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .song-item.playing .si-play i { animation: none; transform: scaleY(.7); }
 }
-.song-btn { position: relative; }
 
 /* ---------- Fields ---------- */
 .field { display: flex; flex-direction: column; gap: 6px; align-items: center; }
@@ -299,6 +367,10 @@ input[type=range] { width: 220px; accent-color: var(--pink); }
   .stats b { font-size: 14px; }
   #loadStatus { font-size: 12px; min-height: 14px; }
   .note-small { font-size: 10px; }
+  .field.songs { flex-direction: column; gap: 4px; }
+  .song-list { max-height: 150px; width: min(320px, 100%); }
+  .si-art { width: 32px; height: 32px; border-radius: 10px; font-size: 15px; }
+  .song-item { padding: 5px 8px 5px 4px; }
 }
 
 /* Very short (landscape phones): two columns so the controls fit without scrolling.
